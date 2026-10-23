@@ -39,6 +39,7 @@ import {
   Database,
   FileText,
   Folder,
+  Headset,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -64,6 +65,7 @@ const iconMap: Record<string, React.ElementType> = {
   'message-square': MessageSquare,
   'book-open': BookOpen,
   database: Database,
+  headset: Headset,
   'file-text': FileText,
   clock: Clock,
   star: Star,
@@ -85,7 +87,7 @@ export function AppShell() {
   // 个人资料弹窗的开关状态
   const [profileOpen, setProfileOpen] = useState(false)
   // 聊天和阅读器都是高频交互页面，需要自己管理内部滚动，外层不能再加 padding 和滚动条。
-  const isImmersiveWorkspace = location.pathname === '/workspace/chat' || location.pathname === '/workspace/reader'
+  const isImmersiveWorkspace = location.pathname === '/workspace/chat' || location.pathname === '/workspace/reader' || location.pathname === '/workspace/support'
   // 路由切换动画使用完整 URL 作为 key，确保同一路由下切换查询参数也能触发进退场。
   const routeAnimationKey = `${location.pathname}${location.search}`
   // 移动端底部 Tab 栏只显示前 4 个工作区菜单项

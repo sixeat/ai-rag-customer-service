@@ -7,6 +7,8 @@ public record KnowledgeBaseResponse(
     Long id,
     String name,
     String description,
+    KnowledgeBaseScenario scenario,
+    boolean published,
     List<Long> materialIds,
     LocalDateTime createdAt,
     LocalDateTime updatedAt

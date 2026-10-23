@@ -4,6 +4,8 @@ export interface KnowledgeBase {
   id: string
   name: string
   description: string | null
+  scenario: 'GENERAL' | 'ECOMMERCE' | 'GAME'
+  published: boolean
   materialIds: string[]
   createdAt: string
   updatedAt: string
@@ -29,13 +31,13 @@ export async function listKnowledgeBases(): Promise<KnowledgeBase[]> {
   return response.data
 }
 
-export async function createKnowledgeBase(name: string, description: string): Promise<KnowledgeBase> {
-  const response = await api.post<KnowledgeBase>('/knowledge-bases', { name, description })
+export async function createKnowledgeBase(name: string, description: string, scenario: KnowledgeBase['scenario']): Promise<KnowledgeBase> {
+  const response = await api.post<KnowledgeBase>('/knowledge-bases', { name, description, scenario })
   return response.data
 }
 
-export async function updateKnowledgeBase(id: string, name: string, description: string): Promise<KnowledgeBase> {
-  const response = await api.put<KnowledgeBase>(`/knowledge-bases/${id}`, { name, description })
+export async function updateKnowledgeBase(id: string, name: string, description: string, scenario: KnowledgeBase['scenario']): Promise<KnowledgeBase> {
+  const response = await api.put<KnowledgeBase>(`/knowledge-bases/${id}`, { name, description, scenario })
   return response.data
 }
 
@@ -50,5 +52,10 @@ export async function setKnowledgeBaseMaterial(id: string, materialId: string, s
 
 export async function askKnowledgeBase(id: string, question: string): Promise<KnowledgeBaseAnswer> {
   const response = await api.post<KnowledgeBaseAnswer>(`/knowledge-bases/${id}/ask`, { question })
+  return response.data
+}
+
+export async function publishKnowledgeBase(id: string, published: boolean): Promise<KnowledgeBase> {
+  const response = await api.put<KnowledgeBase>(`/admin/knowledge-bases/${id}/publish`, null, { params: { published } })
   return response.data
 }

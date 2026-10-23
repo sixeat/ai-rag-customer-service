@@ -11,8 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useMaterials } from '@/api/materials'
 import {
   askKnowledgeBase, createKnowledgeBase, deleteKnowledgeBase, listKnowledgeBases,
-  setKnowledgeBaseMaterial, updateKnowledgeBase,
+  publishKnowledgeBase, setKnowledgeBaseMaterial, updateKnowledgeBase,
   type KnowledgeBaseAnswer,
+  type KnowledgeBase,
 } from '@/api/knowledge-bases'
 
 function errorText(error: unknown): string {
@@ -20,7 +21,7 @@ function errorText(error: unknown): string {
 }
 
 export function KnowledgeBasesPage() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isAdmin } = useAuth()
   const { showToast } = useToast()
   const { data: bases = [], refetch, isLoading } = useQuery({
     queryKey: ['knowledge-bases'], queryFn: listKnowledgeBases, enabled: isAuthenticated,
@@ -32,6 +33,7 @@ export function KnowledgeBasesPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [scenario, setScenario] = useState<KnowledgeBase['scenario']>('GENERAL')
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState<KnowledgeBaseAnswer | null>(null)
   const [busy, setBusy] = useState(false)
@@ -41,6 +43,7 @@ export function KnowledgeBasesPage() {
     setEditingId(null)
     setName('')
     setDescription('')
+    setScenario('GENERAL')
     setDialogOpen(true)
   }
 
@@ -49,6 +52,7 @@ export function KnowledgeBasesPage() {
     setEditingId(String(selected.id))
     setName(selected.name)
     setDescription(selected.description ?? '')
+    setScenario(selected.scenario)
     setDialogOpen(true)
   }
 
@@ -57,8 +61,8 @@ export function KnowledgeBasesPage() {
     setBusy(true)
     try {
       const saved = editingId
-        ? await updateKnowledgeBase(editingId, name.trim(), description.trim())
-        : await createKnowledgeBase(name.trim(), description.trim())
+        ? await updateKnowledgeBase(editingId, name.trim(), description.trim(), scenario)
+        : await createKnowledgeBase(name.trim(), description.trim(), scenario)
       await refetch()
       setSelectedId(String(saved.id))
       setAnswer(null)
@@ -77,6 +81,19 @@ export function KnowledgeBasesPage() {
       await deleteKnowledgeBase(String(selected.id))
       setSelectedId(null)
       setAnswer(null)
+      await refetch()
+    } catch (error) {
+      showToast(errorText(error), 3000)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const togglePublished = async () => {
+    if (!selected) return
+    setBusy(true)
+    try {
+      await publishKnowledgeBase(String(selected.id), !selected.published)
       await refetch()
     } catch (error) {
       showToast(errorText(error), 3000)
@@ -132,7 +149,7 @@ export function KnowledgeBasesPage() {
               <button key={base.id} type="button" onClick={() => { setSelectedId(String(base.id)); setAnswer(null); setQuestion('') }}
                 className={`min-w-44 max-w-full shrink-0 rounded-md px-3 py-2 text-left text-sm lg:w-full ${String(selected?.id) === String(base.id) ? 'bg-emerald-50 font-medium text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100' : 'hover:bg-muted'}`}>
                 <span className="block truncate">{base.name}</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">{base.materialIds.length} 份资料</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">{base.scenario === 'GENERAL' ? '通用' : base.scenario === 'ECOMMERCE' ? '电商客服' : '游戏客服'} · {base.materialIds.length} 份资料{base.published ? ' · 已发布' : ''}</span>
               </button>
             ))}
           </div>
@@ -141,13 +158,15 @@ export function KnowledgeBasesPage() {
         {selected ? <div className="min-w-0 space-y-7">
           <section>
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0"><h2 className="break-words text-lg font-semibold">{selected.name}</h2>{selected.description && <p className="mt-1 break-words text-sm text-muted-foreground">{selected.description}</p>}</div>
+              <div className="min-w-0"><h2 className="break-words text-lg font-semibold">{selected.name}</h2><p className="mt-1 text-xs text-muted-foreground">{selected.scenario === 'GENERAL' ? '通用知识库' : selected.scenario === 'ECOMMERCE' ? '电商客服' : '游戏客服'}{selected.published ? ' · 已发布' : ''}</p>{selected.description && <p className="mt-1 break-words text-sm text-muted-foreground">{selected.description}</p>}</div>
               <div className="flex shrink-0 gap-1">
                 <Button variant="ghost" size="icon" title="编辑知识库" aria-label="编辑知识库" onClick={openEdit}><Pencil className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" title="删除知识库" aria-label="删除知识库" onClick={remove} disabled={busy}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </div>
           </section>
+
+          {isAdmin && selected.scenario !== 'GENERAL' && <div className="flex items-center gap-3"><label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={selected.published} disabled={busy} onChange={() => void togglePublished()} />发布到客服</label></div>}
 
           <section className="space-y-3 border-t pt-5">
             <div className="flex items-center justify-between"><h3 className="text-sm font-semibold">关联资料</h3><Link to="/workspace/materials" className="text-xs text-emerald-700 hover:underline dark:text-emerald-400">管理资料</Link></div>
@@ -184,6 +203,10 @@ export function KnowledgeBasesPage() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{editingId ? '编辑知识库' : '新建知识库'}</DialogTitle></DialogHeader>
         <div className="space-y-3"><Input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} placeholder="知识库名称" aria-label="知识库名称" />
+          <select value={scenario} onChange={(event) => setScenario(event.target.value as KnowledgeBase['scenario'])} disabled={editingId != null && selected?.published}
+            aria-label="知识库场景" className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+            <option value="GENERAL">通用知识库</option><option value="ECOMMERCE">电商客服</option><option value="GAME">游戏客服</option>
+          </select>
           <Textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} placeholder="描述（可选）" aria-label="知识库描述" /></div>
         <DialogFooter><Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button><Button onClick={() => void save()} disabled={busy || !name.trim()}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}保存</Button></DialogFooter>
       </DialogContent></Dialog>

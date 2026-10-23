@@ -34,6 +34,7 @@ export const WORKSPACE_SECTIONS = [
   { path: '/workspace/chat', label: '智能问答', icon: 'message-square', kicker: 'RAG' },
   { path: '/workspace/materials', label: '资料管理', icon: 'book-open', kicker: 'Library' },
   { path: '/workspace/knowledge-bases', label: '知识库问答', icon: 'database', kicker: 'Knowledge' },
+  { path: '/workspace/support', label: '联系客服', icon: 'headset', kicker: 'Support' },
   { path: '/workspace/reader', label: '边读边问', icon: 'file-text', kicker: 'Reader' },
   { path: '/workspace/history', label: '历史记录', icon: 'clock', kicker: 'Trace' },
   { path: '/workspace/favorites', label: '我的收藏', icon: 'star', kicker: 'Review' },
@@ -50,6 +51,7 @@ export const ADMIN_SECTIONS = [
   { path: '/admin/materials', label: '资料队列', icon: 'folder', kicker: 'Queue' },
   { path: '/admin/evaluation', label: 'RAG 评估', icon: 'clipboard-check', kicker: '评估' },
   { path: '/admin/usage-records', label: '使用记录', icon: 'activity', kicker: 'Usage' },
+  { path: '/admin/support', label: '人工客服', icon: 'headset', kicker: 'Support' },
   { path: '/admin/logs', label: '系统日志', icon: 'scroll-text', kicker: 'Audit' },
 ]
 

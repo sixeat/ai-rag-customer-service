@@ -16,6 +16,7 @@ const ForgotPasswordForm = lazy(() => import('@/components/auth/ForgotPasswordFo
 const ChatPage = lazy(() => import('@/components/workspace/ChatPage').then((module) => ({ default: module.ChatPage })))
 const MaterialsPage = lazy(() => import('@/components/workspace/MaterialsPage').then((module) => ({ default: module.MaterialsPage })))
 const KnowledgeBasesPage = lazy(() => import('@/components/workspace/KnowledgeBasesPage').then((module) => ({ default: module.KnowledgeBasesPage })))
+const SupportPage = lazy(() => import('@/components/workspace/SupportPage').then((module) => ({ default: module.SupportPage })))
 const ReaderPage = lazy(() => import('@/components/workspace/ReaderPage').then((module) => ({ default: module.ReaderPage })))
 const HistoryPage = lazy(() => import('@/components/workspace/HistoryPage').then((module) => ({ default: module.HistoryPage })))
 const FavoritesPage = lazy(() => import('@/components/workspace/FavoritesPage').then((module) => ({ default: module.FavoritesPage })))
@@ -26,6 +27,7 @@ const UsersPage = lazy(() => import('@/components/admin/UsersPage').then((module
 const MaterialsAdminPage = lazy(() => import('@/components/admin/MaterialsAdminPage').then((module) => ({ default: module.MaterialsAdminPage })))
 const LogsPage = lazy(() => import('@/components/admin/LogsPage').then((module) => ({ default: module.LogsPage })))
 const UsageRecordsPage = lazy(() => import('@/components/admin/UsageRecordsPage').then((module) => ({ default: module.UsageRecordsPage })))
+const SupportQueuePage = lazy(() => import('@/components/admin/SupportQueuePage').then((module) => ({ default: module.SupportQueuePage })))
 
 /** 路由级加载态，用于懒加载页面组件时保持布局稳定。 */
 function RouteLoading() {
@@ -101,6 +103,7 @@ export const router = createBrowserRouter([
               { path: 'chat', element: lazyElement(<ChatPage />) },        // 智能问答
               { path: 'materials', element: lazyElement(<MaterialsPage />) }, // 资料管理
               { path: 'knowledge-bases', element: lazyElement(<KnowledgeBasesPage />) }, // 知识库问答
+              { path: 'support', element: lazyElement(<SupportPage />) }, // 统一客服入口
               { path: 'reader', element: lazyElement(<ReaderPage />) },     // 文档阅读器
               { path: 'history', element: lazyElement(<HistoryPage />) },   // 问答历史
               { path: 'favorites', element: lazyElement(<FavoritesPage />) }, // 收藏夹
@@ -124,6 +127,7 @@ export const router = createBrowserRouter([
               { path: 'materials', element: lazyElement(<MaterialsAdminPage />) }, // 资料管理
               { path: 'evaluation', element: lazyElement(<EvaluationPage />) },    // RAG 评估
               { path: 'usage-records', element: lazyElement(<UsageRecordsPage />) }, // 使用记录
+              { path: 'support', element: lazyElement(<SupportQueuePage />) }, // 人工客服队列
               { path: 'logs', element: lazyElement(<LogsPage />) },               // 系统日志
             ],
           },

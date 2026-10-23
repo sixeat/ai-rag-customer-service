@@ -3,7 +3,9 @@ package com.mytext.learningassistant.rag;
 import java.util.List;
 
 import com.mytext.learningassistant.common.ApiResponse;
+import com.mytext.learningassistant.security.RateLimitService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,9 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/knowledge-bases")
 public class KnowledgeBaseController {
     private final KnowledgeBaseService service;
+    private final RateLimitService rateLimitService;
 
-    public KnowledgeBaseController(KnowledgeBaseService service) {
+    public KnowledgeBaseController(KnowledgeBaseService service, RateLimitService rateLimitService) {
         this.service = service;
+        this.rateLimitService = rateLimitService;
     }
 
     @GetMapping
@@ -68,7 +72,9 @@ public class KnowledgeBaseController {
     @PostMapping("/{id}/ask")
     public ApiResponse<KnowledgeBaseAnswer> ask(@RequestAttribute("currentUserId") long userId,
                                                   @PathVariable long id,
-                                                  @Valid @RequestBody KnowledgeBaseAskRequest request) {
+                                                  @Valid @RequestBody KnowledgeBaseAskRequest request,
+                                                  HttpServletRequest httpRequest) {
+        rateLimitService.checkRagChat(userId + ":" + httpRequest.getRemoteAddr());
         return ApiResponse.ok(service.ask(userId, id, request));
     }
 }

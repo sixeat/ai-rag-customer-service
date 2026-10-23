@@ -25,6 +25,7 @@ import com.mytext.learningassistant.vector.VectorStoreClient;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class KnowledgeBaseServiceTest {
     private final KnowledgeBaseRepository bases = mock(KnowledgeBaseRepository.class);
@@ -40,6 +41,7 @@ class KnowledgeBaseServiceTest {
     @BeforeEach
     void ownedBase() {
         KnowledgeBaseEntity base = new KnowledgeBaseEntity();
+        ReflectionTestUtils.setField(base, "id", 1L);
         base.setOwnerId(7L);
         when(bases.findByIdAndOwnerId(1L, 7L)).thenReturn(Optional.of(base));
     }
@@ -82,5 +84,38 @@ class KnowledgeBaseServiceTest {
         assertThat(answer.answer()).isEqualTo("七天内可退货。");
         assertThat(answer.sources()).extracting(RagSourceResponse::materialId).containsExactly(10L);
         verify(chunks, never()).findByMaterialIdOrderByChunkIndexAsc(20L);
+    }
+
+    @Test
+    void supportReadsOnlyPublishedAdministratorsMaterial() {
+        KnowledgeBaseEntity published = new KnowledgeBaseEntity();
+        ReflectionTestUtils.setField(published, "id", 2L);
+        published.setOwnerId(99L);
+        published.setScenario(KnowledgeBaseScenario.ECOMMERCE);
+        published.setPublished(true);
+        when(bases.findByScenarioAndPublishedTrue(KnowledgeBaseScenario.ECOMMERCE)).thenReturn(List.of(published));
+
+        KnowledgeBaseMaterialEntity link = new KnowledgeBaseMaterialEntity();
+        link.setMaterialId(10L);
+        when(memberships.findByKnowledgeBaseId(2L)).thenReturn(List.of(link));
+
+        LearningMaterialEntity material = new LearningMaterialEntity();
+        material.setId(10L);
+        material.setOwnerId(99L);
+        material.setTitle("配送政策");
+        material.setTextStatus(MaterialTextStatus.READY);
+        when(materials.findByIdAndOwnerId(10L, 99L)).thenReturn(Optional.of(material));
+        MaterialChunkEntity chunk = new MaterialChunkEntity();
+        chunk.setId(100L);
+        chunk.setMaterialId(10L);
+        chunk.setChunkText("订单将在三个工作日内发货。");
+        when(chunks.findByMaterialIdOrderByChunkIndexAsc(10L)).thenReturn(List.of(chunk));
+        when(llm.answerWithSystemPrompt(eq(7L), any(), any(), any()))
+            .thenReturn(Optional.of(new LlmCompletion("三个工作日内发货。", "test-model")));
+
+        KnowledgeBaseAnswer answer = service.askScenario(7L, KnowledgeBaseScenario.ECOMMERCE, "订单何时发货");
+
+        assertThat(answer.sources()).extracting(RagSourceResponse::materialId).containsExactly(10L);
+        verify(materials, never()).findByIdAndOwnerId(10L, 7L);
     }
 }

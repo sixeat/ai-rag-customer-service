@@ -33,6 +33,7 @@ public class KnowledgeBaseService {
     private final VectorStoreClient vectorStoreClient;
     private final ThirdPartyLlmClient llmClient;
     private final SupportContentService supportContent;
+    private final SupportModelRouter supportModels;
 
     public KnowledgeBaseService(
         KnowledgeBaseRepository bases,
@@ -42,7 +43,8 @@ public class KnowledgeBaseService {
         EmbeddingClient embeddingClient,
         VectorStoreClient vectorStoreClient,
         ThirdPartyLlmClient llmClient,
-        SupportContentService supportContent
+        SupportContentService supportContent,
+        SupportModelRouter supportModels
     ) {
         this.bases = bases;
         this.memberships = memberships;
@@ -52,6 +54,7 @@ public class KnowledgeBaseService {
         this.vectorStoreClient = vectorStoreClient;
         this.llmClient = llmClient;
         this.supportContent = supportContent;
+        this.supportModels = supportModels;
     }
 
     @Transactional(readOnly = true)
@@ -130,7 +133,7 @@ public class KnowledgeBaseService {
     @Transactional(readOnly = true)
     public KnowledgeBaseAnswer ask(long userId, long id, KnowledgeBaseAskRequest request) {
         KnowledgeBaseEntity base = requireBase(userId, id);
-        return answerFromMaterials(userId, materialsForBases(List.of(base)), request.question(), base.getScenario());
+        return answerFromMaterials(userId, materialsForBases(List.of(base)), request.question(), base.getScenario(), false);
     }
 
     @Transactional(readOnly = true)
@@ -143,7 +146,7 @@ public class KnowledgeBaseService {
             .forEach(material -> scoped.put(material.getId(), material));
         supportContent.activeMaterials(scenario)
             .forEach(material -> scoped.put(material.getId(), material));
-        return answerFromMaterials(userId, List.copyOf(scoped.values()), question, scenario);
+        return answerFromMaterials(userId, List.copyOf(scoped.values()), question, scenario, true);
     }
 
     private List<LearningMaterialEntity> materialsForBases(List<KnowledgeBaseEntity> scopedBases) {
@@ -160,7 +163,7 @@ public class KnowledgeBaseService {
     }
 
     private KnowledgeBaseAnswer answerFromMaterials(long userId, List<LearningMaterialEntity> scopedMaterials,
-                                                    String questionText, KnowledgeBaseScenario scenario) {
+                                                    String questionText, KnowledgeBaseScenario scenario, boolean support) {
         if (scopedMaterials.isEmpty()) {
             return new KnowledgeBaseAnswer("知识库中没有可检索的资料。", null, List.of());
         }
@@ -223,7 +226,9 @@ public class KnowledgeBaseService {
                 (hit.chunk().getPageNo() == null ? "" : " 第" + hit.chunk().getPageNo() + "页") +
                 "\n" + truncate(hit.chunk().getChunkText(), 1500)
         ).toList();
-        LlmCompletion completion = llmClient.answerWithSystemPrompt(userId, scenarioPrompt(scenario), question, excerpts)
+        LlmCompletion completion = (support
+            ? supportModels.answer(scenarioPrompt(scenario), question, excerpts, sources)
+            : llmClient.answerWithSystemPrompt(userId, scenarioPrompt(scenario), question, excerpts))
             .orElseThrow(() -> new BusinessException(503, "问答模型未配置或暂时不可用"));
         return new KnowledgeBaseAnswer(completion.content(), completion.modelName(), sources);
     }

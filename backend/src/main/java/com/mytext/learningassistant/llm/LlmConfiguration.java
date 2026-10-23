@@ -3,6 +3,7 @@ package com.mytext.learningassistant.llm;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import com.mytext.learningassistant.rag.SupportRoutingProperties;
 
 /**
  * LLM 模块配置类
@@ -11,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
  * 使用 @EnableConfigurationProperties 注解启用 LlmProperties 配置属性绑定。
  */
 @Configuration
-@EnableConfigurationProperties(LlmProperties.class)
+@EnableConfigurationProperties({LlmProperties.class, SupportRoutingProperties.class})
 public class LlmConfiguration {
 
     /**

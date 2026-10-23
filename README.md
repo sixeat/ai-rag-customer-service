@@ -228,6 +228,20 @@ LLM_API_FORMAT=chat-completions
 
 修改后重启后端。
 
+客服问答会在检索到资料后给问题分级。单一、明确且有匹配依据的事实问题走小模型；多条件、例外、退款计算等问题走 `LLM_MODEL` 配置的旗舰模型。没有配置小模型，或小模型不可用时，会回退旗舰模型。缺少依据时仍按客服流程转人工。
+
+要启用小模型，在 `backend/.env.local` 中增加：
+
+```env
+SUPPORT_SMALL_ENABLED=true
+SUPPORT_SMALL_BASE_URL=http://ollama-server:11434/v1
+SUPPORT_SMALL_API_KEY=ollama
+SUPPORT_SMALL_MODEL=你的本地模型名称
+SUPPORT_SMALL_TIMEOUT=8s
+```
+
+这里使用 Ollama 的 OpenAI 兼容接口；`ollama-server` 应替换为后端能够访问的服务器地址。也可以将小模型配置为其他 OpenAI 兼容服务。客服模型由服务端统一管理，不使用普通用户自行配置的模型。
+
 ### 向量检索
 
 向量检索用于提升 RAG 资料问答的召回质量。需要同时准备：

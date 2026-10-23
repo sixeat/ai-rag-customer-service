@@ -173,6 +173,12 @@ app:
     # API 格式：chat-completions 走 /v1/chat/completions；responses 走 /v1/responses。
     api-format: ${LLM_API_FORMAT:chat-completions}
     timeout: ${LLM_TIMEOUT:20s}
+  support-routing:
+    small-enabled: ${SUPPORT_SMALL_ENABLED:false}
+    small-base-url: ${SUPPORT_SMALL_BASE_URL:${LLM_BASE_URL:}}
+    small-api-key: ${SUPPORT_SMALL_API_KEY:${LLM_API_KEY:}}
+    small-model: ${SUPPORT_SMALL_MODEL:}
+    small-timeout: ${SUPPORT_SMALL_TIMEOUT:8s}
   embedding:
     # 嵌入向量服务配置（用于语义检索）
     enabled: ${EMBEDDING_ENABLED:true}

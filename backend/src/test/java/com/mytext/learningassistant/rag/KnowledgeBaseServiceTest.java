@@ -35,9 +35,10 @@ class KnowledgeBaseServiceTest {
     private final EmbeddingClient embeddings = mock(EmbeddingClient.class);
     private final VectorStoreClient vectors = mock(VectorStoreClient.class);
     private final SupportContentService supportContent = mock(SupportContentService.class);
+    private final SupportModelRouter supportModels = mock(SupportModelRouter.class);
     private final ThirdPartyLlmClient llm = mock(ThirdPartyLlmClient.class);
     private final KnowledgeBaseService service = new KnowledgeBaseService(
-        bases, memberships, materials, chunks, embeddings, vectors, llm, supportContent);
+        bases, memberships, materials, chunks, embeddings, vectors, llm, supportContent, supportModels);
 
     @BeforeEach
     void ownedBase() {
@@ -111,12 +112,13 @@ class KnowledgeBaseServiceTest {
         chunk.setMaterialId(10L);
         chunk.setChunkText("订单将在三个工作日内发货。");
         when(chunks.findByMaterialIdOrderByChunkIndexAsc(10L)).thenReturn(List.of(chunk));
-        when(llm.answerWithSystemPrompt(eq(7L), any(), any(), any()))
+        when(supportModels.answer(any(), any(), any(), any()))
             .thenReturn(Optional.of(new LlmCompletion("三个工作日内发货。", "test-model")));
 
         KnowledgeBaseAnswer answer = service.askScenario(7L, KnowledgeBaseScenario.ECOMMERCE, "订单何时发货");
 
         assertThat(answer.sources()).extracting(RagSourceResponse::materialId).containsExactly(10L);
         verify(materials, never()).findByIdAndOwnerId(10L, 7L);
+        verify(supportModels).answer(any(), eq("订单何时发货"), any(), any());
     }
 }

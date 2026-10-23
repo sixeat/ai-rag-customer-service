@@ -1,0 +1,184 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 98%;
+    --foreground: 220 10% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 10% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 10% 15%;
+    --primary: 215 24% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 16% 96%;
+    --secondary-foreground: 220 10% 15%;
+    --muted: 220 16% 96%;
+    --muted-foreground: 220 10% 52%;
+    --accent: 220 16% 96%;
+    --accent-foreground: 220 10% 15%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 215 24% 38%;
+    --radius: 0.9rem;
+  }
+
+  .dark {
+    --background: 220 18% 10%;
+    --foreground: 210 24% 92%;
+    --card: 220 16% 13%;
+    --card-foreground: 210 24% 92%;
+    --popover: 220 16% 13%;
+    --popover-foreground: 210 24% 92%;
+    --primary: 194 82% 46%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 218 14% 19%;
+    --secondary-foreground: 210 24% 92%;
+    --muted: 218 14% 19%;
+    --muted-foreground: 214 13% 68%;
+    --accent: 218 14% 22%;
+    --accent-foreground: 210 24% 94%;
+    --destructive: 0 72% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 218 14% 25%;
+    --input: 218 14% 25%;
+    --ring: 194 82% 46%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', 'Microsoft YaHei', 'PingFang SC', 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    background:
+      radial-gradient(circle at 12% 14%, rgba(255,255,255,0.95), transparent 24%),
+      radial-gradient(circle at 88% 16%, rgba(230,235,243,0.7), transparent 20%),
+      #f7f8fb;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    width: 100%;
+  }
+
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  /*
+   * PDF.js 文字层：canvas 负责显示页面，文字层负责划词和复制。
+   * 文字本身保持透明，只显示浏览器选区高亮，避免和 PDF 原图重影。
+   */
+  .pdf-text-layer {
+    position: absolute;
+    inset: 0;
+    overflow: clip;
+    opacity: 1;
+    line-height: 1;
+    text-align: initial;
+    -webkit-text-size-adjust: none;
+    -moz-text-size-adjust: none;
+    text-size-adjust: none;
+    transform-origin: 0 0;
+    user-select: text;
+  }
+
+  .pdf-text-layer :is(span, br) {
+    position: absolute;
+    color: transparent;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+  }
+
+  .pdf-text-layer > :not(.markedContent),
+  .pdf-text-layer .markedContent span:not(.markedContent) {
+    z-index: 1;
+  }
+
+  .pdf-text-layer span.markedContent {
+    top: 0;
+    height: 0;
+  }
+
+  .pdf-text-layer span[role='img'],
+  .pdf-text-layer .endOfContent {
+    user-select: none;
+    cursor: default;
+  }
+
+  .pdf-text-layer ::selection {
+    background: rgb(15 23 42 / 0.22);
+  }
+
+  .pdf-text-layer ::-moz-selection {
+    background: rgb(15 23 42 / 0.22);
+  }
+
+  .pdf-text-layer br::selection,
+  .pdf-text-layer br::-moz-selection {
+    background: transparent;
+  }
+
+  .pdf-text-layer .endOfContent {
+    display: block;
+    position: absolute;
+    inset: 100% 0 0;
+    z-index: 0;
+  }
+
+  .pdf-text-layer.selecting .endOfContent {
+    top: 0;
+  }
+
+  /*
+   * 后端/MinerU 文本层：用于扫描 PDF、Office 转 PDF 等没有 PDF.js 原生文本层的页面。
+   * 文本保持透明，只暴露浏览器选区高亮，避免和原文页面重复显示。
+   */
+  .backend-text-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    user-select: text;
+    pointer-events: auto;
+  }
+
+  .backend-text-layer__block {
+    position: absolute;
+    display: block;
+    color: transparent;
+    white-space: pre-wrap;
+    overflow: hidden;
+    cursor: text;
+    user-select: text;
+  }
+
+  .backend-text-layer__block::selection {
+    background: rgb(15 23 42 / 0.22);
+  }
+
+  .backend-text-layer__block::-moz-selection {
+    background: rgb(15 23 42 / 0.22);
+  }
+}

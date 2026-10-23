@@ -1,0 +1,10 @@
+.env.local
+*.log
+target/
+.m2/
+data/
+tools/
+!tools/
+tools/*
+!tools/verify-qdrant.ps1
+

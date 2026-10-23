@@ -38,5 +38,5 @@ export function RouteFallback() {
   // 已登录：根据角色重定向到对应首页
   // - 管理员 → 管理后台仪表盘
   // - 普通用户 → 新建对话的聊天页面
-  return <Navigate to={isAdmin ? '/admin/dashboard' : '/workspace/chat?new=1'} replace />
+  return <Navigate to={isAdmin ? '/admin/dashboard' : '/workspace/support'} replace />
 }

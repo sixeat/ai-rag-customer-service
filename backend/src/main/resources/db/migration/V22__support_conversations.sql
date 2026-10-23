@@ -1,5 +1,7 @@
 ALTER TABLE knowledge_base
-    ADD COLUMN scenario VARCHAR(20) NOT NULL DEFAULT 'GENERAL',
+    ADD COLUMN scenario VARCHAR(20) NOT NULL DEFAULT 'GENERAL';
+
+ALTER TABLE knowledge_base
     ADD COLUMN is_published BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE support_conversation (

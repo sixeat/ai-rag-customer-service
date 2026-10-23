@@ -149,7 +149,8 @@ export function Sidebar() {
   // 判断当前是否在聊天页面
   const isChat = location.pathname === '/workspace/chat'
   // 根据当前路由选择要显示的菜单分组
-  const sections = isAdminRoute ? ADMIN_SECTIONS : WORKSPACE_SECTIONS
+  const sections = isAdminRoute ? ADMIN_SECTIONS : isAdmin
+    ? WORKSPACE_SECTIONS : WORKSPACE_SECTIONS.filter((section) => section.path === '/workspace/support')
 
   // 获取历史会话数据、收藏数据、用户 LLM 配置
   const { data: historyItems = [] } = useHistory()
@@ -320,7 +321,7 @@ export function Sidebar() {
         {/* 品牌 Logo 按钮，点击回到首页 */}
         <button
           className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#111318] text-sm font-black text-white shadow-[0_6px_18px_rgba(15,23,42,0.12)] dark:bg-white dark:text-[#111318]"
-          onClick={() => navigate(isAdmin ? '/admin/dashboard' : '/workspace/chat')}
+          onClick={() => navigate(isAdmin ? '/admin/dashboard' : '/workspace/support')}
           title="智学引擎"
         >
           智
@@ -339,7 +340,7 @@ export function Sidebar() {
       </div>
 
       {/* ========== 新建会话按钮（根据折叠状态显示不同样式） ========== */}
-      {collapsed ? (
+      {isAdmin && (collapsed ? (
         // 折叠状态：只显示图标
         <Button
           variant="outline"
@@ -361,7 +362,7 @@ export function Sidebar() {
           新建会话
           <span className="ml-auto rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-muted-foreground dark:bg-slate-800">Ctrl K</span>
         </Button>
-      )}
+      ))}
 
       {/* ========== 导航菜单区域（可滚动） ========== */}
       <nav className="min-h-0 flex-1 overflow-y-auto pr-1">
@@ -567,7 +568,7 @@ export function Sidebar() {
           <>
             <Separator className="my-4" />
             <button
-              onClick={() => navigate(isAdminRoute ? '/workspace/chat' : '/admin/dashboard')}
+              onClick={() => navigate(isAdminRoute ? '/workspace/support' : '/admin/dashboard')}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-[#f0f2f5] hover:text-foreground dark:hover:bg-white/[0.08]"
             >
               <ChevronLeft className="h-4 w-4" />

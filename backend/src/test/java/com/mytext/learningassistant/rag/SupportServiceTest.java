@@ -32,6 +32,8 @@ class SupportServiceTest {
     void routesOnlyUnambiguousScenario() {
         assertThat(SupportService.route("订单何时发货")).isEqualTo(KnowledgeBaseScenario.ECOMMERCE);
         assertThat(SupportService.route("游戏账号充值不到账")).isEqualTo(KnowledgeBaseScenario.GAME);
+        assertThat(SupportService.route("满减优惠什么时候结束")).isEqualTo(KnowledgeBaseScenario.ECOMMERCE);
+        assertThat(SupportService.route("版本更新有什么内容")).isEqualTo(KnowledgeBaseScenario.GAME);
         assertThat(SupportService.route("你好")).isNull();
         assertThat(SupportService.requestsHuman("请转人工处理")).isTrue();
         assertThat(SupportService.requestsHuman("人工智能是什么")).isFalse();

@@ -111,7 +111,7 @@ export function LoginForm() {
   const finishLogin = () => {
     sessionStorage.removeItem('learning-assistant.chat.current')
     const redirect = searchParams.get('redirect')
-    navigate(redirect?.startsWith('/') && !redirect.startsWith('//') ? redirect : '/workspace/chat?new=1', { replace: true })
+    navigate(redirect?.startsWith('/') && !redirect.startsWith('//') ? redirect : '/workspace/support', { replace: true })
   }
 
   const saveRememberedLogin = (data: PasswordLoginValues) => {

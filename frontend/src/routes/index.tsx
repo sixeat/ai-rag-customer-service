@@ -28,6 +28,7 @@ const MaterialsAdminPage = lazy(() => import('@/components/admin/MaterialsAdminP
 const LogsPage = lazy(() => import('@/components/admin/LogsPage').then((module) => ({ default: module.LogsPage })))
 const UsageRecordsPage = lazy(() => import('@/components/admin/UsageRecordsPage').then((module) => ({ default: module.UsageRecordsPage })))
 const SupportQueuePage = lazy(() => import('@/components/admin/SupportQueuePage').then((module) => ({ default: module.SupportQueuePage })))
+const SupportContentPage = lazy(() => import('@/components/admin/SupportContentPage').then((module) => ({ default: module.SupportContentPage })))
 
 /** 路由级加载态，用于懒加载页面组件时保持布局稳定。 */
 function RouteLoading() {
@@ -99,7 +100,7 @@ export const router = createBrowserRouter([
             element: <AppShell />,  // AppShell 提供侧边栏 + 顶栏 + 内容区布局
             children: [
               // 工作区默认重定向到聊天页
-              { index: true, element: <Navigate to="/workspace/chat?new=1" replace /> },
+              { index: true, element: <Navigate to="/workspace/support" replace /> },
               { path: 'chat', element: lazyElement(<ChatPage />) },        // 智能问答
               { path: 'materials', element: lazyElement(<MaterialsPage />) }, // 资料管理
               { path: 'knowledge-bases', element: lazyElement(<KnowledgeBasesPage />) }, // 知识库问答
@@ -128,6 +129,7 @@ export const router = createBrowserRouter([
               { path: 'evaluation', element: lazyElement(<EvaluationPage />) },    // RAG 评估
               { path: 'usage-records', element: lazyElement(<UsageRecordsPage />) }, // 使用记录
               { path: 'support', element: lazyElement(<SupportQueuePage />) }, // 人工客服队列
+              { path: 'support-content', element: lazyElement(<SupportContentPage />) },
               { path: 'logs', element: lazyElement(<LogsPage />) },               // 系统日志
             ],
           },

@@ -1,6 +1,8 @@
 package com.mytext.learningassistant;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -16,6 +18,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 
 @SpringBootTest(properties = "app.security.login-captcha.enabled=false")
 @AutoConfigureMockMvc
@@ -84,6 +87,53 @@ class SupportApiTest {
                 .header("Authorization", "Bearer " + user))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
+    void onlyAdministratorCanUploadSupportContent() throws Exception {
+        String admin = login("admin", "test-admin-123456");
+        String user = registerAndLogin("support_" + suffix());
+        MockMultipartFile file = new MockMultipartFile("file", "promotion.txt", "text/plain",
+            "活动期间指定商品享受优惠。".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        mvc.perform(multipart("/api/admin/support-content").file(file)
+                .param("category", "ECOMMERCE_PROMOTION")
+                .param("title", "优惠活动")
+                .param("published", "true")
+                .header("Authorization", "Bearer " + user))
+            .andExpect(status().isForbidden());
+
+        String created = mvc.perform(multipart("/api/admin/support-content").file(file)
+                .param("category", "ECOMMERCE_PROMOTION")
+                .param("title", "优惠活动")
+                .param("published", "true")
+                .header("Authorization", "Bearer " + admin))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.category").value("ECOMMERCE_PROMOTION"))
+            .andReturn().getResponse().getContentAsString();
+        long id = mapper.readTree(created).path("data").path("id").asLong();
+
+        mvc.perform(get("/api/admin/support-content").header("Authorization", "Bearer " + user))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/support-content").header("Authorization", "Bearer " + admin))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[?(@.id == " + id + ")].title").value("优惠活动"));
+
+        mvc.perform(multipart("/api/admin/support-content/{id}", id)
+                .with(request -> { request.setMethod("PUT"); return request; })
+                .param("category", "ECOMMERCE_PROMOTION")
+                .param("title", "更新后的优惠活动")
+                .param("published", "false")
+                .header("Authorization", "Bearer " + admin))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.title").value("更新后的优惠活动"))
+            .andExpect(jsonPath("$.data.published").value(false));
+        mvc.perform(delete("/api/admin/support-content/{id}", id)
+                .header("Authorization", "Bearer " + user))
+            .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/admin/support-content/{id}", id)
+                .header("Authorization", "Bearer " + admin))
+            .andExpect(status().isOk());
     }
 
     private String registerAndLogin(String username) throws Exception {

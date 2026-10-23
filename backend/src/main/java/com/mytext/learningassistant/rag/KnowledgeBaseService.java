@@ -32,6 +32,7 @@ public class KnowledgeBaseService {
     private final EmbeddingClient embeddingClient;
     private final VectorStoreClient vectorStoreClient;
     private final ThirdPartyLlmClient llmClient;
+    private final SupportContentService supportContent;
 
     public KnowledgeBaseService(
         KnowledgeBaseRepository bases,
@@ -40,7 +41,8 @@ public class KnowledgeBaseService {
         MaterialChunkRepository chunks,
         EmbeddingClient embeddingClient,
         VectorStoreClient vectorStoreClient,
-        ThirdPartyLlmClient llmClient
+        ThirdPartyLlmClient llmClient,
+        SupportContentService supportContent
     ) {
         this.bases = bases;
         this.memberships = memberships;
@@ -49,6 +51,7 @@ public class KnowledgeBaseService {
         this.embeddingClient = embeddingClient;
         this.vectorStoreClient = vectorStoreClient;
         this.llmClient = llmClient;
+        this.supportContent = supportContent;
     }
 
     @Transactional(readOnly = true)
@@ -135,8 +138,12 @@ public class KnowledgeBaseService {
         if (scenario == KnowledgeBaseScenario.GENERAL) {
             throw new BusinessException(400, "客服场景无效");
         }
-        return answerFromMaterials(userId,
-            materialsForBases(bases.findByScenarioAndPublishedTrue(scenario)), question, scenario);
+        Map<Long, LearningMaterialEntity> scoped = new HashMap<>();
+        materialsForBases(bases.findByScenarioAndPublishedTrue(scenario))
+            .forEach(material -> scoped.put(material.getId(), material));
+        supportContent.activeMaterials(scenario)
+            .forEach(material -> scoped.put(material.getId(), material));
+        return answerFromMaterials(userId, List.copyOf(scoped.values()), question, scenario);
     }
 
     private List<LearningMaterialEntity> materialsForBases(List<KnowledgeBaseEntity> scopedBases) {

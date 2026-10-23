@@ -111,7 +111,7 @@ export function RegisterForm() {
         code: data.code,
       })
       sessionStorage.removeItem('learning-assistant.chat.current')
-      navigate('/workspace/chat?new=1', { replace: true })
+      navigate('/workspace/support', { replace: true })
     } catch (err: unknown) {
       const e = err as { response?: { status?: number }; message?: string }
       if (e.response?.status === 400) {

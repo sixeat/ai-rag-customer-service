@@ -91,7 +91,9 @@ export function AppShell() {
   // 路由切换动画使用完整 URL 作为 key，确保同一路由下切换查询参数也能触发进退场。
   const routeAnimationKey = `${location.pathname}${location.search}`
   // 移动端底部 Tab 栏只显示前 4 个工作区菜单项
-  const mobileSections = WORKSPACE_SECTIONS.slice(0, 4)
+  const workspaceSections = isAdmin ? WORKSPACE_SECTIONS
+    : WORKSPACE_SECTIONS.filter((section) => section.path === '/workspace/support')
+  const mobileSections = isAdmin ? WORKSPACE_SECTIONS.slice(0, 4) : workspaceSections
 
   /**
    * 页面跳转并关闭移动端菜单
@@ -149,19 +151,19 @@ export function AppShell() {
           </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
             {/* 新建对话快捷按钮 */}
-            <Button
+            {isAdmin && <Button
               variant="outline"
               className="mb-4 h-11 justify-start gap-2 rounded-2xl border-[#e6eaf0] bg-white px-3 text-sm font-medium shadow-[0_6px_24px_rgba(15,23,42,0.04)] dark:border-slate-800 dark:bg-[#171a21]"
               onClick={() => goTo('/workspace/chat?new=1')}
             >
               <MessageSquare className="h-4 w-4" />
               新建对话
-            </Button>
+            </Button>}
 
             {/* 工作区菜单列表 */}
             <div className="mb-2 px-1 text-xs font-medium text-muted-foreground">工作区</div>
             <div className="grid gap-1">
-              {WORKSPACE_SECTIONS.map((section) => {
+              {workspaceSections.map((section) => {
                 const Icon = iconMap[section.icon] || FileText
                 const active = location.pathname === section.path
                 return (
@@ -282,7 +284,7 @@ export function AppShell() {
 
       {/* ========== 移动端底部导航栏（桌面端隐藏） ========== */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e8edf3] bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),0.25rem)] pt-1 shadow-[0_-10px_30px_rgba(15,23,42,0.06)] backdrop-blur dark:border-slate-800 dark:bg-[#171a21]/95 md:hidden">
-        <div className="grid grid-cols-5 gap-1">
+        <div className={cn('grid gap-1', isAdmin ? 'grid-cols-5' : 'grid-cols-2')}>
           {/* 前 4 个工作区菜单项 */}
           {mobileSections.map((section) => {
             const Icon = iconMap[section.icon] || FileText

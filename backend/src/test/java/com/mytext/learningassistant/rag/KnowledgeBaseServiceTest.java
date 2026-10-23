@@ -34,9 +34,10 @@ class KnowledgeBaseServiceTest {
     private final MaterialChunkRepository chunks = mock(MaterialChunkRepository.class);
     private final EmbeddingClient embeddings = mock(EmbeddingClient.class);
     private final VectorStoreClient vectors = mock(VectorStoreClient.class);
+    private final SupportContentService supportContent = mock(SupportContentService.class);
     private final ThirdPartyLlmClient llm = mock(ThirdPartyLlmClient.class);
     private final KnowledgeBaseService service = new KnowledgeBaseService(
-        bases, memberships, materials, chunks, embeddings, vectors, llm);
+        bases, memberships, materials, chunks, embeddings, vectors, llm, supportContent);
 
     @BeforeEach
     void ownedBase() {

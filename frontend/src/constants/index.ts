@@ -52,6 +52,7 @@ export const ADMIN_SECTIONS = [
   { path: '/admin/evaluation', label: 'RAG 评估', icon: 'clipboard-check', kicker: '评估' },
   { path: '/admin/usage-records', label: '使用记录', icon: 'activity', kicker: 'Usage' },
   { path: '/admin/support', label: '人工客服', icon: 'headset', kicker: 'Support' },
+  { path: '/admin/support-content', label: '客服知识', icon: 'book-open', kicker: 'Knowledge' },
   { path: '/admin/logs', label: '系统日志', icon: 'scroll-text', kicker: 'Audit' },
 ]
 

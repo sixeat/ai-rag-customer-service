@@ -162,8 +162,8 @@ public class SupportService {
 
     static KnowledgeBaseScenario route(String content) {
         String text = content.toLowerCase(Locale.ROOT);
-        int ecommerce = matches(text, "订单", "物流", "发货", "快递", "退货", "退款", "换货", "售后", "商品", "优惠券", "收货", "order", "shipping", "refund", "return", "delivery");
-        int game = matches(text, "游戏", "账号", "封号", "封禁", "充值", "点券", "道具", "角色", "匹配", "服务器", "掉线", "副本", "战绩", "game", "account", "recharge", "server", "item");
+        int ecommerce = matches(text, "订单", "物流", "发货", "快递", "退货", "退款", "换货", "售后", "商品", "优惠", "促销", "满减", "折扣", "收货", "order", "shipping", "refund", "return", "delivery");
+        int game = matches(text, "游戏", "账号", "封号", "封禁", "充值", "点券", "道具", "角色", "匹配", "服务器", "掉线", "副本", "战绩", "版本", "更新", "补丁", "赛季", "game", "account", "recharge", "server", "item");
         if (ecommerce == game) return null;
         return ecommerce > game ? KnowledgeBaseScenario.ECOMMERCE : KnowledgeBaseScenario.GAME;
     }

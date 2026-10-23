@@ -31,5 +31,9 @@ class FlywaySchemaValidationTest {
              var tables = connection.getMetaData().getTables(null, null, "rag_evaluation_suite", null)) {
             assertThat(tables.next()).isTrue();
         }
+        try (var connection = dataSource.getConnection();
+             var tables = connection.getMetaData().getTables(null, null, "support_content", null)) {
+            assertThat(tables.next()).isTrue();
+        }
     }
 }

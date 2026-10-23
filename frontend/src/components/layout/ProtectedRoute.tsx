@@ -8,7 +8,7 @@
  * 【核心逻辑】
  * 1. 认证状态加载中：显示全屏加载动画
  * 2. 未登录：重定向到 /login 页面
- * 3. 已登录但需要管理员权限却没有：重定向到 /workspace/chat
+ * 3. 已登录但需要管理员权限却没有：重定向到 /workspace/support
  * 4. 权限校验通过：渲染子路由内容
  *
  * 【使用示例】
@@ -55,7 +55,7 @@ export function ProtectedRoute({ requireAdmin, allowGuest }: ProtectedRouteProps
   // 需要管理员权限但当前用户不是管理员：重定向到工作台
   if (requireAdmin && !isAdmin) {
     // 普通登录用户仍可进入工作台，但不能停留在管理端 route。
-    return <Navigate to="/workspace/chat" replace />
+    return <Navigate to="/workspace/support" replace />
   }
 
   // 权限校验通过，渲染子路由内容

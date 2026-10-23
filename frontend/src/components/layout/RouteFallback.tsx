@@ -8,8 +8,8 @@
  * 【核心逻辑】
  * 1. 认证状态加载中：显示全屏加载动画
  * 2. 未登录：重定向到 /login
- * 3. 已登录管理员：重定向到 /admin/dashboard
- * 4. 已登录普通用户：重定向到 /workspace/chat?new=1
+ * 3. 已登录管理员：重定向到 /admin/support
+ * 4. 已登录普通用户：重定向到 /workspace/support
  *
  * 这样用户访问网站根目录时，会被自动引导到合适的页面。
  */
@@ -36,7 +36,7 @@ export function RouteFallback() {
   }
 
   // 已登录：根据角色重定向到对应首页
-  // - 管理员 → 管理后台仪表盘
-  // - 普通用户 → 新建对话的聊天页面
-  return <Navigate to={isAdmin ? '/admin/dashboard' : '/workspace/support'} replace />
+  // - 管理员 → 人工客服队列
+  // - 普通用户 → 客服问答
+  return <Navigate to={isAdmin ? '/admin/support' : '/workspace/support'} replace />
 }

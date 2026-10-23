@@ -23,7 +23,7 @@ export function AuthLayout() {
         navigate(redirect, { replace: true })
         return
       }
-      navigate(isAdmin ? '/admin/dashboard' : '/workspace/support', { replace: true })
+      navigate(isAdmin ? '/admin/support' : '/workspace/support', { replace: true })
     }
   }, [isAuthenticated, isLoading, isAdmin, location.search, navigate])
 

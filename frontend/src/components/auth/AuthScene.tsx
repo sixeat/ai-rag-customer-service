@@ -78,11 +78,11 @@ export function AuthScene({
         <div className="relative z-10 flex h-full flex-col">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-[#1a2a3a] shadow-[0_12px_30px_rgba(17,17,17,0.06)]">
-              智
+              客
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">Learning Assistant</p>
-              <p className="text-sm font-semibold text-[#111111]">智学引擎</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">AI Support</p>
+              <p className="text-sm font-semibold text-[#111111]">智能客服</p>
             </div>
           </div>
 

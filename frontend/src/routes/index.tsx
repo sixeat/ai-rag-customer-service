@@ -6,27 +6,15 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { RouteFallback } from '@/components/layout/RouteFallback'
 
-const ProductLandingPage = lazy(() => import('@/components/landing/ProductLandingPage').then((module) => ({ default: module.ProductLandingPage })))
 const TermsPage = lazy(() => import('@/components/legal/LegalPages').then((module) => ({ default: module.TermsPage })))
 const PrivacyPage = lazy(() => import('@/components/legal/LegalPages').then((module) => ({ default: module.PrivacyPage })))
 const AboutPage = lazy(() => import('@/components/legal/LegalPages').then((module) => ({ default: module.AboutPage })))
 const LoginForm = lazy(() => import('@/components/auth/LoginForm').then((module) => ({ default: module.LoginForm })))
 const RegisterForm = lazy(() => import('@/components/auth/RegisterForm').then((module) => ({ default: module.RegisterForm })))
 const ForgotPasswordForm = lazy(() => import('@/components/auth/ForgotPasswordForm').then((module) => ({ default: module.ForgotPasswordForm })))
-const ChatPage = lazy(() => import('@/components/workspace/ChatPage').then((module) => ({ default: module.ChatPage })))
-const MaterialsPage = lazy(() => import('@/components/workspace/MaterialsPage').then((module) => ({ default: module.MaterialsPage })))
-const KnowledgeBasesPage = lazy(() => import('@/components/workspace/KnowledgeBasesPage').then((module) => ({ default: module.KnowledgeBasesPage })))
 const SupportPage = lazy(() => import('@/components/workspace/SupportPage').then((module) => ({ default: module.SupportPage })))
-const ReaderPage = lazy(() => import('@/components/workspace/ReaderPage').then((module) => ({ default: module.ReaderPage })))
-const HistoryPage = lazy(() => import('@/components/workspace/HistoryPage').then((module) => ({ default: module.HistoryPage })))
-const FavoritesPage = lazy(() => import('@/components/workspace/FavoritesPage').then((module) => ({ default: module.FavoritesPage })))
-const SummaryPage = lazy(() => import('@/components/workspace/SummaryPage').then((module) => ({ default: module.SummaryPage })))
-const EvaluationPage = lazy(() => import('@/components/workspace/EvaluationPage').then((module) => ({ default: module.EvaluationPage })))
-const DashboardPage = lazy(() => import('@/components/admin/DashboardPage').then((module) => ({ default: module.DashboardPage })))
 const UsersPage = lazy(() => import('@/components/admin/UsersPage').then((module) => ({ default: module.UsersPage })))
-const MaterialsAdminPage = lazy(() => import('@/components/admin/MaterialsAdminPage').then((module) => ({ default: module.MaterialsAdminPage })))
 const LogsPage = lazy(() => import('@/components/admin/LogsPage').then((module) => ({ default: module.LogsPage })))
-const UsageRecordsPage = lazy(() => import('@/components/admin/UsageRecordsPage').then((module) => ({ default: module.UsageRecordsPage })))
 const SupportQueuePage = lazy(() => import('@/components/admin/SupportQueuePage').then((module) => ({ default: module.SupportQueuePage })))
 const SupportContentPage = lazy(() => import('@/components/admin/SupportContentPage').then((module) => ({ default: module.SupportContentPage })))
 
@@ -49,24 +37,17 @@ function lazyElement(element: ReactNode) {
  *
  * 路由层级：
  * / (App)
- *   ├── index → 重定向到 /login
+ *   ├── index → 重定向到客服入口
  *   ├── 认证页面（不需要登录，AuthLayout 布局）
  *   │   ├── /login          → 登录页
  *   │   ├── /register       → 注册页
  *   │   └── /forgot-password → 忘记密码页
- *   ├── /workspace（需要登录，ProtectedRoute + AppShell 布局）
- *   │   ├── chat            → 智能问答主页
- *   │   ├── materials       → 资料管理
- *   │   ├── reader          → 文档阅读器
- *   │   ├── history         → 问答历史
- *   │   ├── favorites       → 收藏夹
- *   │   └── summary         → 资料总结
+ *   ├── /workspace（AppShell 布局）
+ *   │   └── support         → 电商与游戏统一客服
  *   ├── /admin（需要管理员权限，ProtectedRoute(requireAdmin) + AppShell）
- *   │   ├── dashboard       → 仪表盘
+ *   │   ├── support         → 人工客服队列
+ *   │   ├── support-content → 客服知识
  *   │   ├── users           → 用户管理
- *   │   ├── materials       → 资料管理（管理员视图）
- *   │   ├── evaluation      → RAG 评估
- *   │   ├── usage-records   → 使用记录
  *   │   └── logs            → 系统日志
  *   └── * → 404 回退页
  */
@@ -75,8 +56,8 @@ export const router = createBrowserRouter([
     path: '/',
     element: <App />,  // App 是根组件（ToastProvider + Outlet）
     children: [
-      // 根路径重定向到登录页
-      { index: true, element: lazyElement(<ProductLandingPage />) },
+      // 根路径直接进入客服工作区；未登录用户在问答入口登录。
+      { index: true, element: <Navigate to="/workspace/support" replace /> },
       { path: 'terms', element: lazyElement(<TermsPage />) },
       { path: 'privacy', element: lazyElement(<PrivacyPage />) },
       { path: 'about', element: lazyElement(<AboutPage />) },
@@ -99,16 +80,10 @@ export const router = createBrowserRouter([
           {
             element: <AppShell />,  // AppShell 提供侧边栏 + 顶栏 + 内容区布局
             children: [
-              // 工作区默认重定向到聊天页
+              // 客服是本分支唯一的用户工作区入口。
               { index: true, element: <Navigate to="/workspace/support" replace /> },
-              { path: 'chat', element: lazyElement(<ChatPage />) },        // 智能问答
-              { path: 'materials', element: lazyElement(<MaterialsPage />) }, // 资料管理
-              { path: 'knowledge-bases', element: lazyElement(<KnowledgeBasesPage />) }, // 知识库问答
               { path: 'support', element: lazyElement(<SupportPage />) }, // 统一客服入口
-              { path: 'reader', element: lazyElement(<ReaderPage />) },     // 文档阅读器
-              { path: 'history', element: lazyElement(<HistoryPage />) },   // 问答历史
-              { path: 'favorites', element: lazyElement(<FavoritesPage />) }, // 收藏夹
-              { path: 'summary', element: lazyElement(<SummaryPage />) },   // 资料总结
+              { path: '*', element: <Navigate to="/workspace/support" replace /> },
             ],
           },
         ],
@@ -122,15 +97,12 @@ export const router = createBrowserRouter([
           {
             element: <AppShell />,
             children: [
-              { index: true, element: <Navigate to="/admin/dashboard" replace /> },
-              { path: 'dashboard', element: lazyElement(<DashboardPage />) },      // 仪表盘
+              { index: true, element: <Navigate to="/admin/support" replace /> },
               { path: 'users', element: lazyElement(<UsersPage />) },              // 用户管理
-              { path: 'materials', element: lazyElement(<MaterialsAdminPage />) }, // 资料管理
-              { path: 'evaluation', element: lazyElement(<EvaluationPage />) },    // RAG 评估
-              { path: 'usage-records', element: lazyElement(<UsageRecordsPage />) }, // 使用记录
               { path: 'support', element: lazyElement(<SupportQueuePage />) }, // 人工客服队列
               { path: 'support-content', element: lazyElement(<SupportContentPage />) },
               { path: 'logs', element: lazyElement(<LogsPage />) },               // 系统日志
+              { path: '*', element: <Navigate to="/admin/support" replace /> },
             ],
           },
         ],

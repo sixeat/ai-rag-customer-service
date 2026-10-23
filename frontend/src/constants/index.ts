@@ -31,14 +31,7 @@ export const MATERIAL_UPLOAD_CHUNK_BYTES = 1 * 1024 * 1024
  * - kicker: 页面副标题/小标签
  */
 export const WORKSPACE_SECTIONS = [
-  { path: '/workspace/chat', label: '智能问答', icon: 'message-square', kicker: 'RAG' },
-  { path: '/workspace/materials', label: '资料管理', icon: 'book-open', kicker: 'Library' },
-  { path: '/workspace/knowledge-bases', label: '知识库问答', icon: 'database', kicker: 'Knowledge' },
-  { path: '/workspace/support', label: '联系客服', icon: 'headset', kicker: 'Support' },
-  { path: '/workspace/reader', label: '边读边问', icon: 'file-text', kicker: 'Reader' },
-  { path: '/workspace/history', label: '历史记录', icon: 'clock', kicker: 'Trace' },
-  { path: '/workspace/favorites', label: '我的收藏', icon: 'star', kicker: 'Review' },
-  { path: '/workspace/summary', label: '知识总结', icon: 'sparkles', kicker: 'Study' },
+  { path: '/workspace/support', label: '智能客服', icon: 'headset', kicker: '电商与游戏' },
 ]
 
 /**
@@ -46,14 +39,10 @@ export const WORKSPACE_SECTIONS = [
  * 结构同 WORKSPACE_SECTIONS
  */
 export const ADMIN_SECTIONS = [
-  { path: '/admin/dashboard', label: '管理员总览', icon: 'layout-dashboard', kicker: 'Overview' },
-  { path: '/admin/users', label: '用户与角色', icon: 'users', kicker: 'Access' },
-  { path: '/admin/materials', label: '资料队列', icon: 'folder', kicker: 'Queue' },
-  { path: '/admin/evaluation', label: 'RAG 评估', icon: 'clipboard-check', kicker: '评估' },
-  { path: '/admin/usage-records', label: '使用记录', icon: 'activity', kicker: 'Usage' },
-  { path: '/admin/support', label: '人工客服', icon: 'headset', kicker: 'Support' },
-  { path: '/admin/support-content', label: '客服知识', icon: 'book-open', kicker: 'Knowledge' },
-  { path: '/admin/logs', label: '系统日志', icon: 'scroll-text', kicker: 'Audit' },
+  { path: '/admin/support', label: '人工客服', icon: 'headset', kicker: '待处理会话' },
+  { path: '/admin/support-content', label: '客服知识', icon: 'book-open', kicker: '活动与公告' },
+  { path: '/admin/users', label: '用户与角色', icon: 'users', kicker: '账号管理' },
+  { path: '/admin/logs', label: '系统日志', icon: 'scroll-text', kicker: '操作记录' },
 ]
 
 // ==================== 预设提示词 ====================

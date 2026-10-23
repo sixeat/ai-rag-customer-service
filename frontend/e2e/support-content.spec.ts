@@ -27,6 +27,8 @@ test('admin publishes support content from text on desktop and mobile', async ({
   })
 
   await page.goto('/admin/support-content')
+  await expect(page.getByRole('navigation', { name: '管理后台' }).getByRole('button', { name: '客服知识' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '资料队列' })).toHaveCount(0)
   await page.getByRole('button', { name: '新增内容' }).click()
   await page.getByRole('textbox', { name: '标题' }).fill('满减活动')
   await page.getByRole('textbox', { name: '正文' }).fill('满减规则详见公告。')
@@ -40,4 +42,7 @@ test('admin publishes support content from text on desktop and mobile', async ({
   await expect(page.getByText('满减活动')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: 'test-results/support-content-mobile.png', fullPage: true })
+
+  await page.goto('/admin/dashboard')
+  await expect(page).toHaveURL(/\/admin\/support$/)
 })

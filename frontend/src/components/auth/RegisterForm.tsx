@@ -128,13 +128,13 @@ export function RegisterForm() {
     <AuthScene
       eyebrow="Access / Register"
       title="创建账号"
-      description="先完成邮箱验证，再创建你的学习身份。"
-      sideTitle="把资料整理成可持续提问的学习现场"
-      sideDescription="完成注册后，你可以上传资料、围绕原文发问，并把结论整理成可复习的知识索引。"
+      description="先完成邮箱验证，再创建客服账号。"
+      sideTitle="开始你的客服会话"
+      sideDescription="注册后即可咨询电商优惠、配送售后、游戏活动和版本更新。"
       sideNotes={[
-        '资料进入系统后会被持续索引和组织。',
-        '问答保留来源引用，便于核对和回看。',
-        '复习总结会围绕同一份资料继续累积。',
+        '一个入口自动识别电商或游戏场景。',
+        '客服回答附带可核对的知识来源。',
+        '复杂问题可转交人工客服。',
       ]}
       sideActionLabel="去登录"
       sideActionTo="/login"

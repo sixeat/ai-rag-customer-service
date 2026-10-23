@@ -218,13 +218,13 @@ export function LoginForm() {
     <AuthScene
       eyebrow="Access / Login"
       title="登录账号"
-      description="使用密码或邮箱验证码进入学习工作台。"
-      sideTitle="重新接上你的知识上下文"
-      sideDescription="回到资料、问答与总结都在一起的工作台，让提问、引用和复习保持连续。"
+      description="使用密码或邮箱验证码进入客服系统。"
+      sideTitle="电商与游戏问题，一个入口"
+      sideDescription="提交问题后，系统会匹配相关客服知识；需要人工处理时，可在同一会话中转接。"
       sideNotes={[
-        '围绕同一份资料持续追问，保留上下文。',
-        '回答附带来源页码，方便回看原文。',
-        '上传、问答和总结在一个工作台内闭环。',
+        '在同一个会话中咨询电商或游戏问题。',
+        '回答附带资料来源，便于核对。',
+        '随时请求人工客服继续处理。',
       ]}
       sideActionLabel="去注册"
       sideActionTo="/register"

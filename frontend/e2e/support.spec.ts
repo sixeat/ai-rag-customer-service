@@ -7,12 +7,14 @@ test.use({ channel: process.platform === 'win32' ? 'msedge' : undefined, video: 
 
 test('single support entry answers and hands off on desktop and mobile', async ({ page }) => {
   let conversation: Record<string, unknown> | null = null
+  const personalRequests: string[] = []
   await page.addInitScript(({ key }) => {
     localStorage.setItem(key, JSON.stringify({ id: '7', username: 'tester', nickname: 'Tester', role: 'USER', token: 'test-token' }))
   }, { key: sessionKey })
   await page.route('**/api/**', async (route) => {
     const path = new URL(route.request().url()).pathname
     if (!path.startsWith('/api/')) return route.continue()
+    if (/^\/api\/(?:materials|knowledge-bases|rag|favorites|llm)(?:\/|$)/.test(path)) personalRequests.push(path)
     if (path === '/api/auth/me') return route.fulfill(ok({ id: '7', username: 'tester', nickname: 'Tester', role: 'USER' }))
     if (path === '/api/support/conversations' && route.request().method() === 'GET') return route.fulfill(ok(conversation ? [conversation] : []))
     if (path === '/api/support/conversations' && route.request().method() === 'POST') {
@@ -36,6 +38,8 @@ test('single support entry answers and hands off on desktop and mobile', async (
   await page.goto('/workspace/support')
   await expect(page).toHaveURL(/\/workspace\/support/)
   await expect(page.getByRole('heading', { name: '客服', exact: true })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: '客服' }).getByRole('button', { name: '智能客服' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '资料管理' })).toHaveCount(0)
   await page.getByRole('textbox', { name: '客服问题' }).fill('订单什么时候发货')
   await page.getByRole('button', { name: '发送' }).click()
   await expect(page.getByText('订单通常在三个工作日内发货。')).toBeVisible()
@@ -48,4 +52,8 @@ test('single support entry answers and hands off on desktop and mobile', async (
   await expect(page.getByRole('textbox', { name: '客服问题' })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: 'test-results/support-mobile.png', fullPage: true })
+
+  await page.goto('/workspace/knowledge-bases')
+  await expect(page).toHaveURL(/\/workspace\/support$/)
+  expect(personalRequests).toEqual([])
 })

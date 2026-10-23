@@ -5,5 +5,5 @@
     <feDropShadow dx="-6" dy="-6" stdDeviation="5" flood-color="#FFFFFF" flood-opacity="0.95"/>
   </filter>
   <rect x="12" y="12" width="40" height="40" rx="13" fill="#E7EDF3" filter="url(#shadow)"/>
-  <text x="32" y="38" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="900" fill="#222833">智</text>
+  <text x="32" y="38" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="900" fill="#222833">客</text>
 </svg>

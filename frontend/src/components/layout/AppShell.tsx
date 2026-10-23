@@ -6,14 +6,14 @@
  * - 左侧导航栏（桌面端显示 Sidebar 组件）
  * - 顶部栏（TopBar 组件）
  * - 主内容区（通过 <Outlet /> 渲染子路由）
- * - 移动端底部导航栏（5 个 Tab + 菜单按钮）
+ * - 移动端底部客服入口和菜单按钮
  * - 移动端侧滑菜单（Dialog 弹窗实现）
  * - 个人资料弹窗（ProfileDialog）
  *
  * 【核心逻辑】
  * 1. 桌面端：左侧 Sidebar + 右侧 TopBar + 内容区
  * 2. 移动端：隐藏 Sidebar，改为底部 Tab 栏 + 侧滑菜单
- * 3. 根据当前路由判断是否为聊天页面，聊天页面使用不同的滚动/布局策略
+ * 3. 客服会话页面管理自己的滚动区域
  * 4. 管理员可以看到额外的"管理员后台"菜单分组
  * 5. 支持浅色/深色主题切换
  */
@@ -34,21 +34,13 @@ import { redirectToLogin } from '@/lib/auth-gate'
 import { cn } from '@/lib/utils'
 import {
   BookOpen,
-  ClipboardCheck,
-  Clock,
-  Database,
   FileText,
-  Folder,
   Headset,
-  LayoutDashboard,
   LogOut,
   Menu,
-  MessageSquare,
   Moon,
   ScrollText,
   Settings,
-  Sparkles,
-  Star,
   Sun,
   Users,
 } from 'lucide-react'
@@ -62,19 +54,10 @@ import { UserAvatar } from './UserAvatar'
  * 用于根据菜单配置中的 icon 字符串动态渲染对应的 Lucide 图标
  */
 const iconMap: Record<string, React.ElementType> = {
-  'message-square': MessageSquare,
   'book-open': BookOpen,
-  database: Database,
   headset: Headset,
-  'file-text': FileText,
-  clock: Clock,
-  star: Star,
-  sparkles: Sparkles,
-  'layout-dashboard': LayoutDashboard,
   users: Users,
-  folder: Folder,
   'scroll-text': ScrollText,
-  'clipboard-check': ClipboardCheck,
 }
 
 export function AppShell() {
@@ -86,14 +69,12 @@ export function AppShell() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   // 个人资料弹窗的开关状态
   const [profileOpen, setProfileOpen] = useState(false)
-  // 聊天和阅读器都是高频交互页面，需要自己管理内部滚动，外层不能再加 padding 和滚动条。
-  const isImmersiveWorkspace = location.pathname === '/workspace/chat' || location.pathname === '/workspace/reader' || location.pathname === '/workspace/support'
+  // 客服会话需要自己管理内部滚动，外层不加滚动条。
+  const isImmersiveWorkspace = location.pathname === '/workspace/support'
   // 路由切换动画使用完整 URL 作为 key，确保同一路由下切换查询参数也能触发进退场。
   const routeAnimationKey = `${location.pathname}${location.search}`
   // 移动端底部 Tab 栏只显示前 4 个工作区菜单项
-  const workspaceSections = isAdmin ? WORKSPACE_SECTIONS
-    : WORKSPACE_SECTIONS.filter((section) => section.path === '/workspace/support')
-  const mobileSections = isAdmin ? WORKSPACE_SECTIONS.slice(0, 4) : workspaceSections
+  const mobileSections = WORKSPACE_SECTIONS
 
   /**
    * 页面跳转并关闭移动端菜单
@@ -150,20 +131,11 @@ export function AppShell() {
             <DialogTitle className="text-base">功能菜单</DialogTitle>
           </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
-            {/* 新建对话快捷按钮 */}
-            {isAdmin && <Button
-              variant="outline"
-              className="mb-4 h-11 justify-start gap-2 rounded-2xl border-[#e6eaf0] bg-white px-3 text-sm font-medium shadow-[0_6px_24px_rgba(15,23,42,0.04)] dark:border-slate-800 dark:bg-[#171a21]"
-              onClick={() => goTo('/workspace/chat?new=1')}
-            >
-              <MessageSquare className="h-4 w-4" />
-              新建对话
-            </Button>}
 
             {/* 工作区菜单列表 */}
             <div className="mb-2 px-1 text-xs font-medium text-muted-foreground">工作区</div>
             <div className="grid gap-1">
-              {workspaceSections.map((section) => {
+              {WORKSPACE_SECTIONS.map((section) => {
                 const Icon = iconMap[section.icon] || FileText
                 const active = location.pathname === section.path
                 return (
@@ -191,7 +163,7 @@ export function AppShell() {
                 <div className="mb-2 mt-5 px-1 text-xs font-medium text-muted-foreground">管理员后台</div>
                 <div className="grid gap-1">
                   {ADMIN_SECTIONS.map((section) => {
-                    const Icon = iconMap[section.icon] || LayoutDashboard
+                    const Icon = iconMap[section.icon] || Headset
                     const active = location.pathname === section.path
                     return (
                       <button
@@ -284,8 +256,8 @@ export function AppShell() {
 
       {/* ========== 移动端底部导航栏（桌面端隐藏） ========== */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e8edf3] bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),0.25rem)] pt-1 shadow-[0_-10px_30px_rgba(15,23,42,0.06)] backdrop-blur dark:border-slate-800 dark:bg-[#171a21]/95 md:hidden">
-        <div className={cn('grid gap-1', isAdmin ? 'grid-cols-5' : 'grid-cols-2')}>
-          {/* 前 4 个工作区菜单项 */}
+        <div className="grid grid-cols-2 gap-1">
+          {/* 客服入口 */}
           {mobileSections.map((section) => {
             const Icon = iconMap[section.icon] || FileText
             const active = location.pathname === section.path
@@ -306,7 +278,7 @@ export function AppShell() {
               </button>
             )
           })}
-          {/* 第 5 个：菜单按钮，点击打开侧滑菜单 */}
+          {/* 管理员入口和账号设置位于侧滑菜单 */}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}

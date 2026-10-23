@@ -119,12 +119,12 @@ export function ForgotPasswordForm() {
       eyebrow="Access / Reset"
       title="找回账号"
       description="通过注册邮箱验证身份，然后设置一个新的登录密码。"
-      sideTitle="密码重置之后，工作台会继续保留你的学习上下文"
-      sideDescription="资料、问答记录和总结内容不会因为密码变更而丢失，你只是在重新获得访问权限。"
+      sideTitle="找回客服账号"
+      sideDescription="重置密码后可继续查看已有客服会话。"
       sideNotes={[
         '验证码会发送到你的注册邮箱。',
         '新密码提交后立即生效。',
-        '重置完成后可直接回到学习工作台。',
+        '重置完成后可直接回到客服系统。',
       ]}
       sideActionLabel="返回登录"
       sideActionTo="/login"

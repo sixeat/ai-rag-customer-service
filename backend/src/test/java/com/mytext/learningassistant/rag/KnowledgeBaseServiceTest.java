@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 import com.mytext.learningassistant.common.BusinessException;
 import com.mytext.learningassistant.embedding.EmbeddingClient;
@@ -107,6 +108,8 @@ class KnowledgeBaseServiceTest {
         material.setTitle("配送政策");
         material.setTextStatus(MaterialTextStatus.READY);
         when(materials.findByIdAndOwnerId(10L, 99L)).thenReturn(Optional.of(material));
+        when(supportContent.eligibleBaseMaterials(eq(KnowledgeBaseScenario.ECOMMERCE), any()))
+            .thenAnswer(invocation -> invocation.getArgument(1));
         MaterialChunkEntity chunk = new MaterialChunkEntity();
         chunk.setId(100L);
         chunk.setMaterialId(10L);
@@ -120,5 +123,23 @@ class KnowledgeBaseServiceTest {
         assertThat(answer.sources()).extracting(RagSourceResponse::materialId).containsExactly(10L);
         verify(materials, never()).findByIdAndOwnerId(10L, 7L);
         verify(supportModels).answer(any(), eq("订单何时发货"), any(), any());
+    }
+
+    @Test
+    void expiredActivityReturnsEndTimeWithoutCallingModel() {
+        SupportContentEntity expired = new SupportContentEntity();
+        expired.setMaterialId(20L);
+        expired.setTitle("周年庆双倍返利");
+        expired.setEndsAt(LocalDateTime.of(2026, 10, 31, 23, 59));
+        when(supportContent.matchingExpired(eq(KnowledgeBaseScenario.GAME), any(), any()))
+            .thenReturn(Optional.of(expired));
+
+        KnowledgeBaseAnswer answer = service.askScenario(7L, KnowledgeBaseScenario.GAME,
+            "周年庆双倍返利现在还能参加吗");
+
+        assertThat(answer.answer()).contains("2026-10-31 23:59", "已于");
+        assertThat(answer.sources()).extracting(RagSourceResponse::materialId).containsExactly(20L);
+        assertThat(answer.sources().getFirst().excerpt()).doesNotContain("返利规则");
+        verify(supportModels, never()).answer(any(), any(), any(), any());
     }
 }

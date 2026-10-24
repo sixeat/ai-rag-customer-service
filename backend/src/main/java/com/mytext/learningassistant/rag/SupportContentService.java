@@ -2,7 +2,12 @@ package com.mytext.learningassistant.rag;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.mytext.learningassistant.common.BusinessException;
 import com.mytext.learningassistant.material.LearningMaterialEntity;
@@ -71,19 +76,64 @@ public class SupportContentService {
 
     @Transactional(readOnly = true)
     public List<LearningMaterialEntity> activeMaterials(KnowledgeBaseScenario scenario) {
-        List<SupportContentCategory> categories = switch (scenario) {
-            case ECOMMERCE -> List.of(SupportContentCategory.ECOMMERCE_PROMOTION);
-            case GAME -> List.of(SupportContentCategory.GAME_EVENT, SupportContentCategory.GAME_UPDATE);
-            case GENERAL -> List.of();
-        };
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Shanghai"));
-        return contents.findByCategoryInAndPublishedTrue(categories).stream()
+        return contents.findByCategoryInAndPublishedTrue(categories(scenario)).stream()
             .filter(content -> (content.getStartsAt() == null || !content.getStartsAt().isAfter(now))
                 && (content.getEndsAt() == null || content.getEndsAt().isAfter(now)))
             .map(content -> materials.findByIdAndOwnerId(content.getMaterialId(), content.getOwnerId()).orElse(null))
             .filter(material -> material != null && (material.getTextStatus() == MaterialTextStatus.READY
                 || material.getTextStatus() == MaterialTextStatus.PARTIAL))
             .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<SupportContentEntity> matchingExpired(KnowledgeBaseScenario scenario, String question,
+                                                           List<LearningMaterialEntity> activeMaterials) {
+        String normalizedQuestion = normalizeTopic(question);
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Shanghai"));
+        return contents.findByCategoryInAndPublishedTrue(categories(scenario)).stream()
+            .filter(content -> matchesTitle(normalizedQuestion, content.getTitle()))
+            .max(Comparator.comparingInt((SupportContentEntity content) -> normalizeTopic(content.getTitle()).length())
+                .thenComparing(content -> content.getEndsAt() == null ? LocalDateTime.MAX : content.getEndsAt()))
+            .filter(content -> content.getEndsAt() != null && !content.getEndsAt().isAfter(now))
+            .filter(content -> activeMaterials.stream().noneMatch(material ->
+                normalizeTopic(content.getTitle()).equals(normalizeTopic(material.getTitle()))))
+            .filter(content -> materials.findByIdAndOwnerId(content.getMaterialId(), content.getOwnerId())
+                .filter(material -> material.getTextStatus() == MaterialTextStatus.READY
+                    || material.getTextStatus() == MaterialTextStatus.PARTIAL).isPresent());
+    }
+
+    @Transactional(readOnly = true)
+    public List<LearningMaterialEntity> eligibleBaseMaterials(KnowledgeBaseScenario scenario,
+                                                                List<LearningMaterialEntity> baseMaterials) {
+        if (baseMaterials.isEmpty()) return baseMaterials;
+        Set<Long> activeIds = activeMaterials(scenario).stream()
+            .map(LearningMaterialEntity::getId).collect(Collectors.toSet());
+        Set<Long> managedIds = contents.findByMaterialIdIn(baseMaterials.stream()
+            .map(LearningMaterialEntity::getId).toList()).stream()
+            .map(SupportContentEntity::getMaterialId).collect(Collectors.toSet());
+        return baseMaterials.stream()
+            .filter(material -> !managedIds.contains(material.getId()) || activeIds.contains(material.getId()))
+            .toList();
+    }
+
+    private boolean matchesTitle(String normalizedQuestion, String title) {
+        String normalizedTitle = normalizeTopic(title);
+        return normalizedTitle.length() >= 6 && normalizedQuestion.contains(normalizedTitle);
+    }
+
+    private List<SupportContentCategory> categories(KnowledgeBaseScenario scenario) {
+        return switch (scenario) {
+            case ECOMMERCE -> List.of(SupportContentCategory.ECOMMERCE_PROMOTION);
+            case GAME -> List.of(SupportContentCategory.GAME_EVENT, SupportContentCategory.GAME_UPDATE);
+            case GENERAL -> List.of();
+        };
+    }
+
+    private String normalizeTopic(String text) {
+        return text == null ? "" : text.toLowerCase(Locale.ROOT)
+            .replace("演示", "").replace("的", "")
+            .replaceAll("[^\\p{IsHan}a-z0-9]", "");
     }
 
     private void validate(SupportContentCategory category, String title, String body,

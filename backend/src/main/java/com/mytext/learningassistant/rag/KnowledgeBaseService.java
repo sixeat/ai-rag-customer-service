@@ -1,5 +1,6 @@
 package com.mytext.learningassistant.rag;
 
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class KnowledgeBaseService {
     private static final int MAX_MATERIALS = 50;
     private static final int MAX_SOURCES = 6;
+    private static final DateTimeFormatter SUPPORT_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private final KnowledgeBaseRepository bases;
     private final KnowledgeBaseMaterialRepository memberships;
     private final LearningMaterialRepository materials;
@@ -142,10 +144,22 @@ public class KnowledgeBaseService {
             throw new BusinessException(400, "客服场景无效");
         }
         Map<Long, LearningMaterialEntity> scoped = new HashMap<>();
-        materialsForBases(bases.findByScenarioAndPublishedTrue(scenario))
-            .forEach(material -> scoped.put(material.getId(), material));
+        List<LearningMaterialEntity> baseMaterials = materialsForBases(bases.findByScenarioAndPublishedTrue(scenario));
+        if (!baseMaterials.isEmpty()) {
+            supportContent.eligibleBaseMaterials(scenario, baseMaterials)
+                .forEach(material -> scoped.put(material.getId(), material));
+        }
         supportContent.activeMaterials(scenario)
             .forEach(material -> scoped.put(material.getId(), material));
+        var expired = supportContent.matchingExpired(scenario, question, List.copyOf(scoped.values()));
+        if (expired.isPresent()) {
+            SupportContentEntity content = expired.get();
+            String notice = "《" + content.getTitle() + "》已于 " + content.getEndsAt().format(SUPPORT_TIME)
+                + "（北京时间）结束。请以当前已发布的活动或官方公告为准。";
+            return new KnowledgeBaseAnswer(notice, null, List.of(new RagSourceResponse(
+                content.getMaterialId(), null, content.getTitle(), null,
+                "该资料已结束；仅用于说明历史活动状态。", 1.0)));
+        }
         return answerFromMaterials(userId, List.copyOf(scoped.values()), question, scenario, true);
     }
 

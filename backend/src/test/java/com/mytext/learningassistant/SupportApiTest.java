@@ -155,22 +155,7 @@ class SupportApiTest {
             .andReturn().getResponse().getContentAsString();
         long id = mapper.readTree(created).path("data").path("id").asLong();
 
-        boolean ready = false;
-        for (int attempt = 0; attempt < 100; attempt++) {
-            String listed = mvc.perform(get("/api/admin/support-content")
-                    .header("Authorization", "Bearer " + admin))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-            for (var content : mapper.readTree(listed).path("data")) {
-                if (content.path("id").asLong() == id && "READY".equals(content.path("textStatus").asText())) {
-                    ready = true;
-                    break;
-                }
-            }
-            if (ready) break;
-            Thread.sleep(100);
-        }
-        org.assertj.core.api.Assertions.assertThat(ready).isTrue();
+        awaitContentReady(admin, id);
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> knowledgeBases.askScenario(
                 1L, KnowledgeBaseScenario.GAME, "游戏版本更新增加了什么？"))
             .isInstanceOf(BusinessException.class)
@@ -183,6 +168,50 @@ class SupportApiTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.scenario").value("GAME"))
             .andExpect(jsonPath("$.data.status").value("WAITING_HUMAN"));
+    }
+
+    @Test
+    void expiredActivityAnswersWithEndTimeAndNoModel() throws Exception {
+        String admin = login("admin", "test-admin-123456");
+        String user = registerAndLogin("support_" + suffix());
+        MockMultipartFile file = new MockMultipartFile("file", "expired-event.txt", "text/plain",
+            "周年庆双倍返利仅用于过期活动测试。".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String created = mvc.perform(multipart("/api/admin/support-content").file(file)
+                .param("category", "GAME_EVENT")
+                .param("title", "周年庆双倍返利")
+                .param("published", "true")
+                .param("endsAt", "2020-10-31T23:59:00")
+                .header("Authorization", "Bearer " + admin))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        awaitContentReady(admin, mapper.readTree(created).path("data").path("id").asLong());
+
+        mvc.perform(post("/api/support/conversations")
+                .header("Authorization", "Bearer " + user)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"content\":\"游戏周年庆双倍返利什么时候结束？\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.scenario").value("GAME"))
+            .andExpect(jsonPath("$.data.status").value("AI"))
+            .andExpect(jsonPath("$.data.messages[1].content").value(
+                org.hamcrest.Matchers.containsString("2020-10-31 23:59")))
+            .andExpect(jsonPath("$.data.messages[1].sources[0].materialTitle").value("周年庆双倍返利"));
+    }
+
+    private void awaitContentReady(String admin, long id) throws Exception {
+        for (int attempt = 0; attempt < 100; attempt++) {
+            String listed = mvc.perform(get("/api/admin/support-content")
+                    .header("Authorization", "Bearer " + admin))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+            for (var content : mapper.readTree(listed).path("data")) {
+                if (content.path("id").asLong() == id && "READY".equals(content.path("textStatus").asText())) {
+                    return;
+                }
+            }
+            Thread.sleep(100);
+        }
+        org.assertj.core.api.Assertions.fail("客服资料未在预期时间内完成解析");
     }
 
     private String registerAndLogin(String username) throws Exception {

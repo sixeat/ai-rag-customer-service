@@ -191,7 +191,7 @@ export function AboutPage() {
           <p className="text-sm font-black tracking-[0.18em] text-slate-500">ABOUT</p>
           <h1 className="mt-4 text-4xl font-black leading-tight tracking-normal text-[#222833] sm:text-5xl">关于我们</h1>
           <p className="mt-5 text-base font-medium leading-8 text-slate-600">
-            智能客服为电商和游戏问题提供统一问答入口。系统根据问题匹配管理员维护的客服知识，必要时将会话转交人工客服。
+            智能客服为电商和游戏问题提供统一问答入口。系统根据问题匹配管理员维护的客服知识；用户可主动请求转接人工客服。
           </p>
           <p className="mt-4 text-base font-medium leading-8 text-slate-600">
             回答会展示资料来源，便于核对优惠活动、游戏活动和版本更新等信息。管理员负责发布和维护这些内容。

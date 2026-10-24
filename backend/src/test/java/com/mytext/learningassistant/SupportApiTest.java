@@ -141,7 +141,7 @@ class SupportApiTest {
     }
 
     @Test
-    void unavailableModelTransfersMatchedKnowledgeQuestionToHuman() throws Exception {
+    void unavailableModelLeavesMatchedKnowledgeQuestionInAiConversation() throws Exception {
         String admin = login("admin", "test-admin-123456");
         String user = registerAndLogin("support_" + suffix());
         MockMultipartFile file = new MockMultipartFile("file", "game-update.txt", "text/plain",
@@ -167,7 +167,9 @@ class SupportApiTest {
                 .content("{\"content\":\"游戏版本更新增加了什么？\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.scenario").value("GAME"))
-            .andExpect(jsonPath("$.data.status").value("WAITING_HUMAN"));
+            .andExpect(jsonPath("$.data.status").value("AI"))
+            .andExpect(jsonPath("$.data.messages[1].content").value(
+                org.hamcrest.Matchers.containsString("模型暂时不可用")));
     }
 
     @Test

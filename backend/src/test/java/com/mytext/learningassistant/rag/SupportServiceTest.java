@@ -36,9 +36,12 @@ class SupportServiceTest {
         assertThat(SupportService.route("版本更新有什么内容")).isEqualTo(KnowledgeBaseScenario.GAME);
         assertThat(SupportService.route("你好")).isNull();
         assertThat(SupportService.requestsHuman("请转人工处理")).isTrue();
+        assertThat(SupportService.requestsHuman("可以帮我转人工吗？")).isTrue();
+        assertThat(SupportService.requestsHuman("人工客服")).isTrue();
         assertThat(SupportService.requestsHuman("人工智能是什么")).isFalse();
-        assertThat(SupportService.requiresHumanAction("我的订单在哪里")).isTrue();
-        assertThat(SupportService.needsHumanAnswer("无法根据资料确认")).isTrue();
+        assertThat(SupportService.requestsHuman("人工客服什么时候在线？")).isFalse();
+        assertThat(SupportService.requestsHuman("怎么转人工？")).isFalse();
+        assertThat(SupportService.requestsHuman("如何联系人工客服？")).isFalse();
     }
 
     @Test
@@ -67,7 +70,7 @@ class SupportServiceTest {
     }
 
     @Test
-    void missingEvidenceEntersHumanQueue() {
+    void missingEvidenceStaysInAiConversation() {
         SupportConversationEntity conversation = conversation();
         when(conversations.findByIdAndOwnerId(1L, 7L)).thenReturn(Optional.of(conversation));
         when(messages.findByConversationIdOrderByIdAsc(1L)).thenReturn(List.of());
@@ -77,7 +80,44 @@ class SupportServiceTest {
         SupportConversationResponse response = service.send(7L, 1L, "订单何时发货");
 
         assertThat(response.scenario()).isEqualTo(KnowledgeBaseScenario.ECOMMERCE);
-        assertThat(response.status()).isEqualTo(SupportStatus.WAITING_HUMAN);
+        assertThat(response.status()).isEqualTo(SupportStatus.AI);
+        ArgumentCaptor<SupportMessageEntity> captor = ArgumentCaptor.forClass(SupportMessageEntity.class);
+        verify(messages, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertThat(captor.getAllValues().get(1).getContent()).isEqualTo("无依据");
+    }
+
+    @Test
+    void modelFailureStaysInAiConversation() {
+        SupportConversationEntity conversation = conversation();
+        when(conversations.findByIdAndOwnerId(1L, 7L)).thenReturn(Optional.of(conversation));
+        when(messages.findByConversationIdOrderByIdAsc(1L)).thenReturn(List.of());
+        when(knowledgeBases.askScenario(eq(7L), eq(KnowledgeBaseScenario.GAME), any()))
+            .thenThrow(new BusinessException(503, "问答模型未配置或暂时不可用"));
+
+        SupportConversationResponse response = service.send(7L, 1L, "游戏版本更新了什么？");
+
+        assertThat(response.status()).isEqualTo(SupportStatus.AI);
+        ArgumentCaptor<SupportMessageEntity> captor = ArgumentCaptor.forClass(SupportMessageEntity.class);
+        verify(messages, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertThat(captor.getAllValues().get(1).getContent()).contains("模型暂时不可用");
+    }
+
+    @Test
+    void personalAccountQuestionAndUncertainAnswerStayInAiConversation() {
+        SupportConversationEntity conversation = conversation();
+        when(conversations.findByIdAndOwnerId(1L, 7L)).thenReturn(Optional.of(conversation));
+        when(messages.findByConversationIdOrderByIdAsc(1L)).thenReturn(List.of());
+        when(knowledgeBases.askScenario(eq(7L), eq(KnowledgeBaseScenario.ECOMMERCE), any()))
+            .thenReturn(new KnowledgeBaseAnswer("无法确认具体订单状态，请提供更多信息。", null,
+                List.of(new RagSourceResponse(2L, 3L, "售后规则", null, "请核对订单信息。", 0.7))));
+
+        SupportConversationResponse response = service.send(7L, 1L, "我的订单为什么没有优惠？");
+
+        assertThat(response.status()).isEqualTo(SupportStatus.AI);
+        verify(knowledgeBases).askScenario(7L, KnowledgeBaseScenario.ECOMMERCE, "我的订单为什么没有优惠？");
+        ArgumentCaptor<SupportMessageEntity> captor = ArgumentCaptor.forClass(SupportMessageEntity.class);
+        verify(messages, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertThat(captor.getAllValues().get(1).getContent()).contains("无法确认具体订单状态");
     }
 
     @Test

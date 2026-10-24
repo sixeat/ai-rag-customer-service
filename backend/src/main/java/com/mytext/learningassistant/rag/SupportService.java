@@ -2,6 +2,7 @@ package com.mytext.learningassistant.rag;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -14,6 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SupportService {
+    private static final Pattern HUMAN_REQUEST = Pattern.compile(
+        "(?:请|帮我|我要|我想|我需要|麻烦|给我)(?:直接|帮我|给我|一个|个)?"
+            + "(?:(?:转|找|联系|接入|转接)(?:到|给)?(?:人工|人工客服|真人客服)|人工客服|真人客服)"
+    );
     private final SupportConversationRepository conversations;
     private final SupportMessageRepository messages;
     private final KnowledgeBaseService knowledgeBases;
@@ -78,24 +83,16 @@ public class SupportService {
             conversations.save(conversation);
         }
 
-        if (requiresHumanAction(question)) {
-            handoff(conversation);
-            return response(conversation);
-        }
-
         KnowledgeBaseAnswer answer;
         try {
             answer = knowledgeBases.askScenario(userId, conversation.getScenario(), question);
         } catch (BusinessException exception) {
             if (exception.getCode() != 503) throw exception;
-            handoff(conversation);
+            addMessage(conversation, SupportSender.AI,
+                "问答模型暂时不可用，请稍后重试。需要人工处理时，可以点击“转人工”。", List.of());
             return response(conversation);
         }
-        if (answer.sources().isEmpty() || needsHumanAnswer(answer.answer())) {
-            handoff(conversation);
-        } else {
-            addMessage(conversation, SupportSender.AI, answer.answer(), answer.sources());
-        }
+        addMessage(conversation, SupportSender.AI, answer.answer(), answer.sources());
         return response(conversation);
     }
 
@@ -140,24 +137,11 @@ public class SupportService {
     }
 
     static boolean requestsHuman(String content) {
-        String text = content.toLowerCase(Locale.ROOT);
-        return text.contains("转人工") || text.contains("人工客服") || text.contains("真人客服")
-            || text.contains("找人工") || text.contains("我要人工") || text.contains("human agent");
-    }
-
-    static boolean requiresHumanAction(String content) {
-        String text = content.toLowerCase(Locale.ROOT);
-        return text.contains("我的订单") || text.contains("查订单") || text.contains("帮我退款")
-            || text.contains("充值不到账") || text.contains("找回账号") || text.contains("封号申诉")
-            || text.contains("my order") || text.contains("my account");
-    }
-
-    static boolean needsHumanAnswer(String answer) {
-        String text = answer == null ? "" : answer.toLowerCase(Locale.ROOT);
-        return text.isBlank() || text.contains("不知道") || text.contains("无法确认")
-            || text.contains("缺少依据") || text.contains("没有足够依据")
-            || text.contains("资料未提供") || text.contains("无法根据资料")
-            || text.contains("无法判断") || text.contains("cannot determine");
+        String text = content.trim().toLowerCase(Locale.ROOT);
+        if (text.matches("(转人工|人工客服|真人客服|找人工|我要人工|human agent)[！!。.,，\\s]*")) {
+            return true;
+        }
+        return HUMAN_REQUEST.matcher(text).find() || text.contains("connect me to a human agent");
     }
 
     static KnowledgeBaseScenario route(String content) {

@@ -11,6 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mytext.learningassistant.common.BusinessException;
+import com.mytext.learningassistant.rag.KnowledgeBaseScenario;
+import com.mytext.learningassistant.rag.KnowledgeBaseService;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,7 @@ import org.springframework.mock.web.MockMultipartFile;
 class SupportApiTest {
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper mapper;
+    @Autowired private KnowledgeBaseService knowledgeBases;
 
     @Test
     void humanHandoffAndAgentReplyStayInOwnersConversation() throws Exception {
@@ -134,6 +138,51 @@ class SupportApiTest {
         mvc.perform(delete("/api/admin/support-content/{id}", id)
                 .header("Authorization", "Bearer " + admin))
             .andExpect(status().isOk());
+    }
+
+    @Test
+    void unavailableModelTransfersMatchedKnowledgeQuestionToHuman() throws Exception {
+        String admin = login("admin", "test-admin-123456");
+        String user = registerAndLogin("support_" + suffix());
+        MockMultipartFile file = new MockMultipartFile("file", "game-update.txt", "text/plain",
+            "游戏版本更新增加活动日历，并优化邮件列表。".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String created = mvc.perform(multipart("/api/admin/support-content").file(file)
+                .param("category", "GAME_UPDATE")
+                .param("title", "游戏版本更新")
+                .param("published", "true")
+                .header("Authorization", "Bearer " + admin))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        long id = mapper.readTree(created).path("data").path("id").asLong();
+
+        boolean ready = false;
+        for (int attempt = 0; attempt < 100; attempt++) {
+            String listed = mvc.perform(get("/api/admin/support-content")
+                    .header("Authorization", "Bearer " + admin))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+            for (var content : mapper.readTree(listed).path("data")) {
+                if (content.path("id").asLong() == id && "READY".equals(content.path("textStatus").asText())) {
+                    ready = true;
+                    break;
+                }
+            }
+            if (ready) break;
+            Thread.sleep(100);
+        }
+        org.assertj.core.api.Assertions.assertThat(ready).isTrue();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> knowledgeBases.askScenario(
+                1L, KnowledgeBaseScenario.GAME, "游戏版本更新增加了什么？"))
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining("问答模型未配置");
+
+        mvc.perform(post("/api/support/conversations")
+                .header("Authorization", "Bearer " + user)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"content\":\"游戏版本更新增加了什么？\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.scenario").value("GAME"))
+            .andExpect(jsonPath("$.data.status").value("WAITING_HUMAN"));
     }
 
     private String registerAndLogin(String username) throws Exception {

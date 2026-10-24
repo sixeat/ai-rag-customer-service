@@ -136,7 +136,7 @@ public class KnowledgeBaseService {
         return answerFromMaterials(userId, materialsForBases(List.of(base)), request.question(), base.getScenario(), false);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, noRollbackFor = BusinessException.class)
     public KnowledgeBaseAnswer askScenario(long userId, KnowledgeBaseScenario scenario, String question) {
         if (scenario == KnowledgeBaseScenario.GENERAL) {
             throw new BusinessException(400, "客服场景无效");

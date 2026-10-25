@@ -82,6 +82,24 @@ class SupportModelRouterTest {
     }
 
     @Test
+    void detailedRouteReportsActualModelAndFallback() {
+        LlmClient flagship = mock(LlmClient.class);
+        LlmClient small = mock(LlmClient.class);
+        when(small.chat(anyString(), anyString())).thenReturn(Optional.empty());
+        when(flagship.chat(anyString(), anyString()))
+            .thenReturn(Optional.of(new LlmResult("周日结束", "flagship", 12, 4, 16)));
+
+        SupportModelRouteResult route = new SupportModelRouter(flagship, small, classifier)
+            .answerDetailed("依据资料", "优惠什么时候结束？", List.of("周日结束"), sources).orElseThrow();
+
+        assertThat(route.difficulty()).isEqualTo(SupportQuestionDifficultyClassifier.Difficulty.LOW);
+        assertThat(route.requestedTier()).isEqualTo("SMALL");
+        assertThat(route.actualTier()).isEqualTo("FLAGSHIP");
+        assertThat(route.fallback()).isTrue();
+        assertThat(route.completion().totalTokens()).isEqualTo(16);
+    }
+
+    @Test
     void ollamaCompatibleEndpointCanServeSmallModel() throws Exception {
         AtomicReference<String> requestBody = new AtomicReference<>();
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);

@@ -5,6 +5,7 @@ import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -23,12 +24,14 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class SupportContentService {
     private final SupportContentRepository contents;
+    private final SupportRetiredMaterialRepository retiredMaterials;
     private final LearningMaterialRepository materials;
     private final MaterialService materialService;
 
-    public SupportContentService(SupportContentRepository contents, LearningMaterialRepository materials,
-                                 MaterialService materialService) {
+    public SupportContentService(SupportContentRepository contents, SupportRetiredMaterialRepository retiredMaterials,
+                                 LearningMaterialRepository materials, MaterialService materialService) {
         this.contents = contents;
+        this.retiredMaterials = retiredMaterials;
         this.materials = materials;
         this.materialService = materialService;
     }
@@ -58,7 +61,10 @@ public class SupportContentService {
         SupportContentEntity content = require(id);
         validate(category, title, body, startsAt, endsAt, file, false);
         if (file != null && !file.isEmpty()) {
-            content.setMaterialId(materialService.upload(adminId, title.trim(), null, file, null).id());
+            long oldMaterialId = content.getMaterialId();
+            long newMaterialId = materialService.upload(adminId, title.trim(), null, file, null).id();
+            retiredMaterials.save(new SupportRetiredMaterialEntity(oldMaterialId, content.getCategory().scenario()));
+            content.setMaterialId(newMaterialId);
             content.setOwnerId(adminId);
         } else if (!title.trim().equals(content.getTitle())) {
             materialService.update(content.getOwnerId(), content.getMaterialId(),
@@ -71,7 +77,9 @@ public class SupportContentService {
 
     @Transactional
     public void delete(long id) {
-        contents.delete(require(id));
+        SupportContentEntity content = require(id);
+        retiredMaterials.save(new SupportRetiredMaterialEntity(content.getMaterialId(), content.getCategory().scenario()));
+        contents.delete(content);
     }
 
     @Transactional(readOnly = true)
@@ -84,6 +92,25 @@ public class SupportContentService {
             .filter(material -> material != null && (material.getTextStatus() == MaterialTextStatus.READY
                 || material.getTextStatus() == MaterialTextStatus.PARTIAL))
             .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Long> diagnosticFilterCounts(KnowledgeBaseScenario scenario) {
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Shanghai"));
+        Map<String, Long> counts = contents.findAllByOrderByUpdatedAtDesc().stream()
+            .filter(content -> categories(scenario).contains(content.getCategory()))
+            .collect(Collectors.groupingBy(content -> {
+                if (!content.isPublished()) return "DRAFT";
+                if (content.getStartsAt() != null && content.getStartsAt().isAfter(now)) return "FUTURE";
+                if (content.getEndsAt() != null && !content.getEndsAt().isAfter(now)) return "EXPIRED";
+                return materials.findByIdAndOwnerId(content.getMaterialId(), content.getOwnerId())
+                    .filter(material -> material.getTextStatus() == MaterialTextStatus.READY
+                        || material.getTextStatus() == MaterialTextStatus.PARTIAL)
+                    .isPresent() ? "ACTIVE" : "NOT_READY";
+            }, Collectors.counting()));
+        long retiredCount = retiredMaterials.countByScenario(scenario);
+        if (retiredCount > 0) counts.put("RETIRED", retiredCount);
+        return counts;
     }
 
     @Transactional(readOnly = true)
@@ -112,7 +139,11 @@ public class SupportContentService {
         Set<Long> managedIds = contents.findByMaterialIdIn(baseMaterials.stream()
             .map(LearningMaterialEntity::getId).toList()).stream()
             .map(SupportContentEntity::getMaterialId).collect(Collectors.toSet());
+        Set<Long> retiredIds = retiredMaterials.findByMaterialIdIn(baseMaterials.stream()
+            .map(LearningMaterialEntity::getId).toList()).stream()
+            .map(SupportRetiredMaterialEntity::getMaterialId).collect(Collectors.toSet());
         return baseMaterials.stream()
+            .filter(material -> !retiredIds.contains(material.getId()))
             .filter(material -> !managedIds.contains(material.getId()) || activeIds.contains(material.getId()))
             .toList();
     }

@@ -14,6 +14,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mytext.learningassistant.common.BusinessException;
 import com.mytext.learningassistant.rag.KnowledgeBaseScenario;
 import com.mytext.learningassistant.rag.KnowledgeBaseService;
+import com.mytext.learningassistant.rag.SupportContentService;
+import com.mytext.learningassistant.material.LearningMaterialRepository;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +31,8 @@ class SupportApiTest {
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper mapper;
     @Autowired private KnowledgeBaseService knowledgeBases;
+    @Autowired private SupportContentService supportContents;
+    @Autowired private LearningMaterialRepository materials;
 
     @Test
     void humanHandoffAndAgentReplyStayInOwnersConversation() throws Exception {
@@ -138,6 +142,62 @@ class SupportApiTest {
         mvc.perform(delete("/api/admin/support-content/{id}", id)
                 .header("Authorization", "Bearer " + admin))
             .andExpect(status().isOk());
+    }
+
+    @Test
+    void replacingSupportFileRetiresOldMaterialFromPublishedBaseScope() throws Exception {
+        String admin = login("admin", "test-admin-123456");
+        MockMultipartFile oldFile = new MockMultipartFile("file", "old-event.txt", "text/plain",
+            "旧活动奖励已经失效。".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String created = mvc.perform(multipart("/api/admin/support-content").file(oldFile)
+                .param("category", "GAME_EVENT").param("title", "版本替换测试")
+                .param("published", "true").header("Authorization", "Bearer " + admin))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        long contentId = mapper.readTree(created).path("data").path("id").asLong();
+        long oldMaterialId = mapper.readTree(created).path("data").path("materialId").asLong();
+
+        MockMultipartFile newFile = new MockMultipartFile("file", "new-event.txt", "text/plain",
+            "新活动奖励按新规则发放。".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        mvc.perform(multipart("/api/admin/support-content/{id}", contentId).file(newFile)
+                .with(request -> { request.setMethod("PUT"); return request; })
+                .param("category", "GAME_EVENT").param("title", "版本替换测试")
+                .param("published", "false").header("Authorization", "Bearer " + admin))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.materialId").value(org.hamcrest.Matchers.not(oldMaterialId)));
+
+        var oldMaterial = materials.findById(oldMaterialId).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(supportContents.eligibleBaseMaterials(
+            KnowledgeBaseScenario.GAME, java.util.List.of(oldMaterial))).isEmpty();
+    }
+
+    @Test
+    void supportDiagnosticsAndEvaluationAreAdminOnly() throws Exception {
+        String user = registerAndLogin("support_" + suffix());
+        String admin = login("admin", "test-admin-123456");
+
+        mvc.perform(post("/api/admin/support/diagnose")
+                .header("Authorization", "Bearer " + user)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"question\":\"转人工\"}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/support/evaluation/cases")
+                .header("Authorization", "Bearer " + user))
+            .andExpect(status().isForbidden());
+
+        mvc.perform(post("/api/admin/support/diagnose")
+                .header("Authorization", "Bearer " + admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"question\":\"转人工\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.outcome").value("HANDOFF_REQUESTED"));
+        mvc.perform(get("/api/admin/support/evaluation/cases")
+                .header("Authorization", "Bearer " + admin))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(30));
+        mvc.perform(post("/api/admin/support/evaluation/cases/H01/run")
+                .header("Authorization", "Bearer " + admin))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("PASS"));
     }
 
     @Test

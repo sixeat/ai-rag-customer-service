@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { BookOpen, ChevronLeft, Headset, LogOut, Moon, ScrollText, Settings, Sun, Users } from 'lucide-react'
+import { BookOpen, ChartNoAxesCombined, ChevronLeft, Headset, LogOut, Moon, ScrollText, Settings, Sun, Users } from 'lucide-react'
 import { ADMIN_SECTIONS, WORKSPACE_SECTIONS } from '@/constants'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
@@ -14,6 +14,7 @@ const iconMap: Record<string, React.ElementType> = {
   'book-open': BookOpen,
   users: Users,
   'scroll-text': ScrollText,
+  chart: ChartNoAxesCombined,
 }
 
 export function Sidebar() {

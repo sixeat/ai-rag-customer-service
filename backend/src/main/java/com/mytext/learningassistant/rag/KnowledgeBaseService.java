@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import com.mytext.learningassistant.common.BusinessException;
 import com.mytext.learningassistant.embedding.EmbeddingClient;
@@ -135,11 +136,35 @@ public class KnowledgeBaseService {
     @Transactional(readOnly = true)
     public KnowledgeBaseAnswer ask(long userId, long id, KnowledgeBaseAskRequest request) {
         KnowledgeBaseEntity base = requireBase(userId, id);
-        return answerFromMaterials(userId, materialsForBases(List.of(base)), request.question(), base.getScenario(), false);
+        return answerFromMaterials(userId, materialsForBases(List.of(base)), request.question(), base.getScenario(), false, null);
     }
 
     @Transactional(readOnly = true, noRollbackFor = BusinessException.class)
     public KnowledgeBaseAnswer askScenario(long userId, KnowledgeBaseScenario scenario, String question) {
+        return answerScenario(userId, scenario, question, null);
+    }
+
+    @Transactional(readOnly = true)
+    public SupportDiagnosticResponse diagnoseScenario(long userId, KnowledgeBaseScenario scenario, String question) {
+        long started = System.nanoTime();
+        SupportTrace trace = new SupportTrace();
+        trace.contentFilters = supportContent.diagnosticFilterCounts(scenario);
+        KnowledgeBaseAnswer answer;
+        try {
+            answer = answerScenario(userId, scenario, question, trace);
+        } catch (BusinessException exception) {
+            if (exception.getCode() != 503) throw exception;
+            trace.outcome = "MODEL_UNAVAILABLE";
+            answer = new KnowledgeBaseAnswer("问答模型暂时不可用，请稍后重试。", null, List.of());
+        }
+        return new SupportDiagnosticResponse(question, scenario, trace.outcome, answer.answer(),
+            answer.sources(), trace.activeMaterials, trace.candidateChunks, trace.contentFilters,
+            trace.difficulty, trace.requestedTier, trace.actualTier, answer.modelName(),
+            trace.fallback, trace.totalTokens, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started));
+    }
+
+    private KnowledgeBaseAnswer answerScenario(long userId, KnowledgeBaseScenario scenario, String question,
+                                               SupportTrace trace) {
         if (scenario == KnowledgeBaseScenario.GENERAL) {
             throw new BusinessException(400, "客服场景无效");
         }
@@ -151,8 +176,10 @@ public class KnowledgeBaseService {
         }
         supportContent.activeMaterials(scenario)
             .forEach(material -> scoped.put(material.getId(), material));
+        if (trace != null) trace.activeMaterials = scoped.size();
         var expired = supportContent.matchingExpired(scenario, question, List.copyOf(scoped.values()));
         if (expired.isPresent()) {
+            if (trace != null) trace.outcome = "EXPIRED_NOTICE";
             SupportContentEntity content = expired.get();
             String notice = "《" + content.getTitle() + "》已于 " + content.getEndsAt().format(SUPPORT_TIME)
                 + "（北京时间）结束。请以当前已发布的活动或官方公告为准。";
@@ -160,7 +187,7 @@ public class KnowledgeBaseService {
                 content.getMaterialId(), null, content.getTitle(), null,
                 "该资料已结束；仅用于说明历史活动状态。", 1.0)));
         }
-        return answerFromMaterials(userId, List.copyOf(scoped.values()), question, scenario, true);
+        return answerFromMaterials(userId, List.copyOf(scoped.values()), question, scenario, true, trace);
     }
 
     private List<LearningMaterialEntity> materialsForBases(List<KnowledgeBaseEntity> scopedBases) {
@@ -177,8 +204,10 @@ public class KnowledgeBaseService {
     }
 
     private KnowledgeBaseAnswer answerFromMaterials(long userId, List<LearningMaterialEntity> scopedMaterials,
-                                                    String questionText, KnowledgeBaseScenario scenario, boolean support) {
+                                                    String questionText, KnowledgeBaseScenario scenario, boolean support,
+                                                    SupportTrace trace) {
         if (scopedMaterials.isEmpty()) {
+            if (trace != null) trace.outcome = "NO_MATERIALS";
             return new KnowledgeBaseAnswer("知识库中没有可检索的资料。", null, List.of());
         }
 
@@ -192,7 +221,9 @@ public class KnowledgeBaseService {
                 }
             }
         }
+        if (trace != null) trace.candidateChunks = chunkById.size();
         if (chunkById.isEmpty()) {
+            if (trace != null) trace.outcome = "NO_CHUNKS";
             return new KnowledgeBaseAnswer("知识库中没有可检索的资料。", null, List.of());
         }
 
@@ -229,6 +260,7 @@ public class KnowledgeBaseService {
             .sorted(Comparator.comparingDouble(RankedChunk::score).reversed())
             .limit(MAX_SOURCES).toList();
         if (selected.isEmpty()) {
+            if (trace != null) trace.outcome = "NO_MATCH";
             return new KnowledgeBaseAnswer("知识库中未找到相关依据。", null, List.of());
         }
         List<RagSourceResponse> sources = selected.stream().map(hit -> new RagSourceResponse(
@@ -240,10 +272,24 @@ public class KnowledgeBaseService {
                 (hit.chunk().getPageNo() == null ? "" : " 第" + hit.chunk().getPageNo() + "页") +
                 "\n" + truncate(hit.chunk().getChunkText(), 1500)
         ).toList();
-        LlmCompletion completion = (support
-            ? supportModels.answer(scenarioPrompt(scenario), question, excerpts, sources)
-            : llmClient.answerWithSystemPrompt(userId, scenarioPrompt(scenario), question, excerpts))
-            .orElseThrow(() -> new BusinessException(503, "问答模型未配置或暂时不可用"));
+        LlmCompletion completion;
+        if (support && trace != null) {
+            SupportModelRouteResult route = supportModels.answerDetailed(
+                scenarioPrompt(scenario), question, excerpts, sources)
+                .orElseThrow(() -> new BusinessException(503, "问答模型未配置或暂时不可用"));
+            completion = route.completion();
+            trace.difficulty = route.difficulty().name();
+            trace.requestedTier = route.requestedTier();
+            trace.actualTier = route.actualTier();
+            trace.fallback = route.fallback();
+            trace.totalTokens = completion.totalTokens();
+        } else {
+            completion = (support
+                ? supportModels.answer(scenarioPrompt(scenario), question, excerpts, sources)
+                : llmClient.answerWithSystemPrompt(userId, scenarioPrompt(scenario), question, excerpts))
+                .orElseThrow(() -> new BusinessException(503, "问答模型未配置或暂时不可用"));
+        }
+        if (trace != null) trace.outcome = "ANSWERED";
         return new KnowledgeBaseAnswer(completion.content(), completion.modelName(), sources);
     }
 
@@ -282,4 +328,16 @@ public class KnowledgeBaseService {
     }
 
     private record RankedChunk(MaterialChunkEntity chunk, LearningMaterialEntity material, double score) {}
+
+    private static class SupportTrace {
+        String outcome = "NO_MATCH";
+        int activeMaterials;
+        int candidateChunks;
+        Map<String, Long> contentFilters = Map.of();
+        String difficulty;
+        String requestedTier;
+        String actualTier;
+        boolean fallback;
+        Integer totalTokens;
+    }
 }

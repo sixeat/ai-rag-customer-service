@@ -41,6 +41,7 @@ export const WORKSPACE_SECTIONS = [
 export const ADMIN_SECTIONS = [
   { path: '/admin/support', label: '人工客服', icon: 'headset', kicker: '待处理会话' },
   { path: '/admin/support-content', label: '客服知识', icon: 'book-open', kicker: '活动与公告' },
+  { path: '/admin/support-diagnostics', label: '问答诊断', icon: 'chart', kicker: '追踪与评估' },
   { path: '/admin/users', label: '用户与角色', icon: 'users', kicker: '账号管理' },
   { path: '/admin/logs', label: '系统日志', icon: 'scroll-text', kicker: '操作记录' },
 ]

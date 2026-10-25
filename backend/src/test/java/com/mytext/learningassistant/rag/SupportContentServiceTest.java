@@ -20,8 +20,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class SupportContentServiceTest {
     private final SupportContentRepository contents = mock(SupportContentRepository.class);
+    private final SupportRetiredMaterialRepository retired = mock(SupportRetiredMaterialRepository.class);
     private final LearningMaterialRepository materials = mock(LearningMaterialRepository.class);
-    private final SupportContentService service = new SupportContentService(contents, materials, mock(MaterialService.class));
+    private final SupportContentService service = new SupportContentService(contents, retired, materials, mock(MaterialService.class));
 
     @Test
     void onlyPublishedEffectiveAndParsedContentIsRetrievable() {
@@ -101,6 +102,28 @@ class SupportContentServiceTest {
             material(2L, MaterialTextStatus.READY), material(3L, MaterialTextStatus.READY),
             material(4L, MaterialTextStatus.READY))))
             .extracting(LearningMaterialEntity::getId).containsExactly(4L);
+    }
+
+    @Test
+    void publishedBaseCannotReintroduceReplacedSupportUpload() {
+        when(contents.findByMaterialIdIn(List.of(2L, 4L))).thenReturn(List.of());
+        when(retired.findByMaterialIdIn(List.of(2L, 4L)))
+            .thenReturn(List.of(new SupportRetiredMaterialEntity(2L, KnowledgeBaseScenario.GAME)));
+
+        assertThat(service.eligibleBaseMaterials(KnowledgeBaseScenario.GAME, List.of(
+            material(2L, MaterialTextStatus.READY), material(4L, MaterialTextStatus.READY))))
+            .extracting(LearningMaterialEntity::getId).containsExactly(4L);
+    }
+
+    @Test
+    void diagnosticCountsRetiredVersionsInTheirOriginalScenario() {
+        when(contents.findAllByOrderByUpdatedAtDesc()).thenReturn(List.of());
+        when(retired.countByScenario(KnowledgeBaseScenario.GAME)).thenReturn(2L);
+
+        assertThat(service.diagnosticFilterCounts(KnowledgeBaseScenario.GAME))
+            .containsEntry("RETIRED", 2L);
+        assertThat(service.diagnosticFilterCounts(KnowledgeBaseScenario.ECOMMERCE))
+            .doesNotContainKey("RETIRED");
     }
 
     private SupportContentEntity content(long id, SupportContentCategory category, boolean published) {

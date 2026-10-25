@@ -41,7 +41,8 @@ public final class AuthAccessPolicy {
         "/admin/materials",
         "/admin/evaluation",
         "/admin/usage-records",
-        "/admin/logs"
+        "/admin/logs",
+        "/admin/support-diagnostics"
     );
 
     /** 普通用户的权限标识列表 */

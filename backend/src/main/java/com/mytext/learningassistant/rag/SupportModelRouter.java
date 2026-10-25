@@ -37,6 +37,12 @@ public class SupportModelRouter {
 
     public Optional<LlmCompletion> answer(String systemPrompt, String question, List<String> excerpts,
                                           List<RagSourceResponse> sources) {
+        return answerDetailed(systemPrompt, question, excerpts, sources)
+            .map(SupportModelRouteResult::completion);
+    }
+
+    public Optional<SupportModelRouteResult> answerDetailed(String systemPrompt, String question,
+                                                             List<String> excerpts, List<RagSourceResponse> sources) {
         var difficulty = classifier.classify(question, sources);
         String prompt = "用户问题：\n" + question + "\n\n检索到的资料片段：\n" + String.join("\n\n", excerpts);
         if (difficulty == SupportQuestionDifficultyClassifier.Difficulty.LOW && small != null) {
@@ -44,7 +50,8 @@ public class SupportModelRouter {
                 Optional<LlmResult> result = small.chat(systemPrompt, prompt);
                 if (result.isPresent()) {
                     log.info("Support model route: difficulty=LOW, model={}", result.get().modelName());
-                    return result.map(this::completion);
+                    return result.map(value -> new SupportModelRouteResult(
+                        completion(value), difficulty, "SMALL", "SMALL", false));
                 }
             } catch (RuntimeException exception) {
                 log.debug("Support small model failed: {}", exception.getMessage());
@@ -54,7 +61,9 @@ public class SupportModelRouter {
         Optional<LlmResult> result = flagship.chat(systemPrompt, prompt);
         result.ifPresent(value -> log.info("Support model route: difficulty={}, model={}",
             difficulty, value.modelName()));
-        return result.map(this::completion);
+        boolean fallback = difficulty == SupportQuestionDifficultyClassifier.Difficulty.LOW && small != null;
+        return result.map(value -> new SupportModelRouteResult(
+            completion(value), difficulty, fallback ? "SMALL" : "FLAGSHIP", "FLAGSHIP", fallback));
     }
 
     private LlmCompletion completion(LlmResult result) {

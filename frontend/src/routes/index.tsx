@@ -17,6 +17,7 @@ const UsersPage = lazy(() => import('@/components/admin/UsersPage').then((module
 const LogsPage = lazy(() => import('@/components/admin/LogsPage').then((module) => ({ default: module.LogsPage })))
 const SupportQueuePage = lazy(() => import('@/components/admin/SupportQueuePage').then((module) => ({ default: module.SupportQueuePage })))
 const SupportContentPage = lazy(() => import('@/components/admin/SupportContentPage').then((module) => ({ default: module.SupportContentPage })))
+const SupportDiagnosticsPage = lazy(() => import('@/components/admin/SupportDiagnosticsPage').then((module) => ({ default: module.SupportDiagnosticsPage })))
 
 /** 路由级加载态，用于懒加载页面组件时保持布局稳定。 */
 function RouteLoading() {
@@ -47,6 +48,7 @@ function lazyElement(element: ReactNode) {
  *   ├── /admin（需要管理员权限，ProtectedRoute(requireAdmin) + AppShell）
  *   │   ├── support         → 人工客服队列
  *   │   ├── support-content → 客服知识
+ *   │   ├── support-diagnostics → 问答诊断与评估
  *   │   ├── users           → 用户管理
  *   │   └── logs            → 系统日志
  *   └── * → 404 回退页
@@ -101,6 +103,7 @@ export const router = createBrowserRouter([
               { path: 'users', element: lazyElement(<UsersPage />) },              // 用户管理
               { path: 'support', element: lazyElement(<SupportQueuePage />) }, // 人工客服队列
               { path: 'support-content', element: lazyElement(<SupportContentPage />) },
+              { path: 'support-diagnostics', element: lazyElement(<SupportDiagnosticsPage />) },
               { path: 'logs', element: lazyElement(<LogsPage />) },               // 系统日志
               { path: '*', element: <Navigate to="/admin/support" replace /> },
             ],

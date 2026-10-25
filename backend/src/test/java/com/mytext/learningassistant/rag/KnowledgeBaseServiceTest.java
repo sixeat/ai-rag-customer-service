@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 import java.time.LocalDateTime;
 
 import com.mytext.learningassistant.common.BusinessException;
@@ -141,5 +142,38 @@ class KnowledgeBaseServiceTest {
         assertThat(answer.sources()).extracting(RagSourceResponse::materialId).containsExactly(20L);
         assertThat(answer.sources().getFirst().excerpt()).doesNotContain("返利规则");
         verify(supportModels, never()).answer(any(), any(), any(), any());
+    }
+
+    @Test
+    void diagnosticUsesSameSourcesAndReportsModelRoute() {
+        LearningMaterialEntity material = new LearningMaterialEntity();
+        material.setId(10L);
+        material.setOwnerId(99L);
+        material.setTitle("周末优惠");
+        material.setTextStatus(MaterialTextStatus.READY);
+        when(supportContent.activeMaterials(KnowledgeBaseScenario.ECOMMERCE))
+            .thenReturn(List.of(material));
+        when(supportContent.diagnosticFilterCounts(KnowledgeBaseScenario.ECOMMERCE))
+            .thenReturn(Map.of("ACTIVE", 1L, "EXPIRED", 1L));
+        MaterialChunkEntity chunk = new MaterialChunkEntity();
+        chunk.setId(100L);
+        chunk.setMaterialId(10L);
+        chunk.setChunkText("周末优惠于周日结束。");
+        when(chunks.findByMaterialIdOrderByChunkIndexAsc(10L)).thenReturn(List.of(chunk));
+        when(supportModels.answerDetailed(any(), any(), any(), any()))
+            .thenReturn(Optional.of(new SupportModelRouteResult(
+                new LlmCompletion("周日结束", "small-model", 12, 3, 15),
+                SupportQuestionDifficultyClassifier.Difficulty.LOW, "SMALL", "SMALL", false)));
+
+        SupportDiagnosticResponse result = service.diagnoseScenario(7L,
+            KnowledgeBaseScenario.ECOMMERCE, "优惠什么时候结束？");
+
+        assertThat(result.outcome()).isEqualTo("ANSWERED");
+        assertThat(result.activeMaterials()).isEqualTo(1);
+        assertThat(result.candidateChunks()).isEqualTo(1);
+        assertThat(result.sources()).extracting(RagSourceResponse::materialId).containsExactly(10L);
+        assertThat(result.modelName()).isEqualTo("small-model");
+        assertThat(result.totalTokens()).isEqualTo(15);
+        assertThat(result.contentFilters()).containsEntry("EXPIRED", 1L);
     }
 }
